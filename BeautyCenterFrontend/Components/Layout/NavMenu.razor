@@ -1,0 +1,86 @@
+﻿
+<div class="top-row navbar navbar-dark ps-3">
+    @if (IsExpanded)
+    {
+        <div class="container-fluid">
+            <a class="navbar-brand" href="">
+                <i class="fas fa-spa me-2"></i>
+                <span class="brand-text">Güzellik Merkezi</span>
+            </a>
+        </div>
+    }
+</div>
+
+<div class="nav-scrollable @(IsExpanded ? "expanded" : "collapsed")">
+    <nav class="nav flex-column">
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="" Match="NavLinkMatch.All">
+                <i class="fas fa-tachometer-alt @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Dashboard</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="customers">
+                <i class="fas fa-users @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Müşteriler</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="appointments">
+                <i class="fas fa-calendar-alt @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Randevular</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="payments">
+                <i class="fas fa-credit-card @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Ödemeler</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="services">
+                <i class="fas fa-spa @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Hizmetler</span>
+                }
+            </NavLink>
+        </div>
+
+        <div class="nav-item @(IsExpanded ? "px-3" : "px-2")">
+            <NavLink class="@($"nav-link {(IsExpanded ? "" : "icon-only")}")" href="reports">
+                <i class="fas fa-chart-bar @(IsExpanded ? "me-2" : "")"></i> 
+                @if (IsExpanded)
+                {
+                    <span class="nav-text">Raporlar</span>
+                }
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"NavMenu: IsExpanded = {IsExpanded}");
+    }
+}
+

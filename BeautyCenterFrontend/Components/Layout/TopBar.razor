@@ -1,0 +1,58 @@
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using BeautyCenterFrontend.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="top-row px-4 d-flex justify-content-end">
+    <div class="d-flex align-items-center">
+        <span class="me-3" style="color: #667eea; font-weight: 500;">
+            <i class="fas fa-user-circle me-1"></i>
+            Hoş geldin, <strong>@currentUserName</strong>
+        </span>
+        <button class="btn btn-outline-primary btn-sm" style="font-weight: 500; border-color: #667eea; color: #667eea;" @onclick="Logout">
+            <i class="fas fa-sign-out-alt me-1"></i>
+            Çıkış
+        </button>
+    </div>
+</div>
+
+@code {
+    private string currentUserName = "Kullanıcı";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CheckAuth();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckAuth()
+    {
+        try
+        {
+            var isAuth = await AuthService.IsAuthenticatedAsync();
+            if (isAuth)
+            {
+                var user = await AuthService.GetCurrentUserAsync();
+                currentUserName = user?.Username ?? "Kullanıcı";
+            }
+            else
+            {
+                currentUserName = "Misafir";
+            }
+        }
+        catch
+        {
+            currentUserName = "Kullanıcı";
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

@@ -1,0 +1,504 @@
+@page "/payments"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject PaymentService PaymentService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Ödeme Yönetimi - Güzellik Merkezi</PageTitle>
+
+<div class="payment-management">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-credit-card me-2"></i>
+                Ödeme Yönetimi
+            </h1>
+            <p class="text-muted">Ödemeleri görüntüle ve yönet</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenAddPaymentModal">
+            <i class="fas fa-plus me-2"></i>
+            Yeni Ödeme
+        </button>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card bg-success text-white">
+                <div class="stat-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>₺@totalRevenue.ToString("N0")</h3>
+                    <p>Toplam Gelir</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card bg-primary text-white">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>₺@todayRevenue.ToString("N0")</h3>
+                    <p>Bugünkü Gelir</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card bg-warning text-white">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>₺@weeklyRevenue.ToString("N0")</h3>
+                    <p>Haftalık Gelir</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card bg-info text-white">
+                <div class="stat-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>@totalPayments</h3>
+                    <p>Toplam Ödeme</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="Ödeme ara..." 
+                               @bind="searchTerm" @oninput="OnSearchChanged">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" @bind="selectedPaymentMethod" @bind:after="OnPaymentMethodChanged">
+                        <option value="">Tüm Ödeme Yöntemleri</option>
+                        <option value="Cash">Nakit</option>
+                        <option value="Card">Kredi Kartı</option>
+                        <option value="Transfer">Havale</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn @(dateFilter == "today" ? "btn-primary" : "btn-outline-primary")" 
+                                @onclick="@(() => SetDateFilter("today"))">
+                            <i class="fas fa-calendar-day me-1"></i>
+                            Bugün
+                        </button>
+                        <button type="button" class="btn @(dateFilter == "week" ? "btn-primary" : "btn-outline-primary")" 
+                                @onclick="@(() => SetDateFilter("week"))">
+                            <i class="fas fa-calendar-week me-1"></i>
+                            Bu Hafta
+                        </button>
+                        <button type="button" class="btn @(dateFilter == "month" ? "btn-primary" : "btn-outline-primary")" 
+                                @onclick="@(() => SetDateFilter("month"))">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Bu Ay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                </div>
+            }
+            else if (filteredPayments.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Müşteri</th>
+                                <th>Hizmet</th>
+                                <th>Tutar</th>
+                                <th>Ödeme Yöntemi</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var payment in filteredPayments)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="payment-date">
+                                            <div class="fw-bold">@payment.PaymentDate.ToString("dd.MM.yyyy")</div>
+                                            <small class="text-muted">@payment.PaymentDate.ToString("HH:mm")</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3">
+                                                @if (!string.IsNullOrEmpty(payment.CustomerName))
+                                                {
+                                                    var names = payment.CustomerName.Split(' ');
+                                                    @if (names.Length > 1)
+                                                    {
+                                                        @names[0][0]@names[1][0]
+                                                    }
+                                                    else
+                                                    {
+                                                        @names[0][0]
+                                                    }
+                                                }
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">@payment.CustomerName</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="service-info">
+                                            <div class="fw-bold">Hizmet</div>
+                                            @if (!string.IsNullOrEmpty(payment.Notes))
+                                            {
+                                                <small class="text-muted">@payment.Notes</small>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="amount-info">
+                                            <div class="fw-bold text-success">₺@payment.Amount.ToString("N2")</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(GetPaymentMethodColor(payment.PaymentMethod))">
+                                            @GetPaymentMethodText(payment.PaymentMethod)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => ViewPaymentDetails(payment.Id)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info" 
+                                                    @onclick="() => PrintReceipt(payment.Id)">
+                                                <i class="fas fa-print"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                    @onclick="() => EditPayment(payment)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Ödeme bulunamadı</h5>
+                    <p class="text-muted">Arama kriterlerinizi değiştirin veya yeni ödeme ekleyin.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-title {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .stat-card {
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 20px;
+        opacity: 0.8;
+    }
+
+    .stat-content h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .stat-content p {
+        margin: 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .payment-date {
+        min-width: 120px;
+    }
+
+    .service-info {
+        min-width: 150px;
+    }
+
+    .amount-info {
+        min-width: 100px;
+    }
+
+    .table th {
+        border-top: none;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-group .btn {
+        border-radius: 4px;
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    .bg-cash {
+        background-color: #28a745 !important;
+    }
+
+    .bg-card {
+        background-color: #0d3b66 !important;
+    }
+
+    .bg-transfer {
+        background-color: #17a2b8 !important;
+    }
+</style>
+
+@code {
+    private List<PaymentModel> payments = new();
+    private List<PaymentModel> filteredPayments = new();
+    private bool isLoading = true;
+    private string searchTerm = "";
+    private string selectedPaymentMethod = "";
+    private string dateFilter = "month";
+
+    private decimal totalRevenue = 0;
+    private decimal todayRevenue = 0;
+    private decimal weeklyRevenue = 0;
+    private int totalPayments = 0;
+
+    private bool authChecked = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip auth check in OnInitialized - will be done in OnAfterRender
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !authChecked)
+        {
+            authChecked = true;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            await LoadPayments();
+            await LoadStatistics();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPayments()
+    {
+        try
+        {
+            isLoading = true;
+            
+            DateTime startDate, endDate;
+            switch (dateFilter)
+            {
+                case "today":
+                    startDate = DateTime.Today;
+                    endDate = DateTime.Today.AddDays(1);
+                    break;
+                case "week":
+                    startDate = DateTime.Today.AddDays(-7);
+                    endDate = DateTime.Today.AddDays(1);
+                    break;
+                case "month":
+                    startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                    endDate = startDate.AddMonths(1);
+                    break;
+                default:
+                    startDate = DateTime.Today.AddDays(-30);
+                    endDate = DateTime.Today.AddDays(1);
+                    break;
+            }
+
+            payments = await PaymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödemeler yüklenirken bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            var allPayments = await PaymentService.GetAllPaymentsAsync();
+            totalRevenue = allPayments.Sum(p => p.Amount);
+            totalPayments = allPayments.Count;
+
+            var todayPayments = allPayments.Where(p => p.PaymentDate.Date == DateTime.Today);
+            todayRevenue = todayPayments.Sum(p => p.Amount);
+
+            var weekStart = DateTime.Today.AddDays(-7);
+            var weeklyPayments = allPayments.Where(p => p.PaymentDate >= weekStart);
+            weeklyRevenue = weeklyPayments.Sum(p => p.Amount);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "İstatistikler yüklenirken bir hata oluştu.", "danger");
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredPayments = payments.Where(p => 
+            (string.IsNullOrEmpty(searchTerm) || 
+             p.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(selectedPaymentMethod) || p.PaymentMethod == selectedPaymentMethod)
+        ).OrderByDescending(p => p.PaymentDate).ToList();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnPaymentMethodChanged()
+    {
+        ApplyFilters();
+        await Task.CompletedTask;
+    }
+
+    private async Task SetDateFilter(string filter)
+    {
+        dateFilter = filter;
+        await LoadPayments();
+    }
+
+    private string GetPaymentMethodColor(string method)
+    {
+        return method switch
+        {
+            "Cash" => "success",
+            "Card" => "primary",
+            "Transfer" => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetPaymentMethodText(string method)
+    {
+        return method switch
+        {
+            "Cash" => "Nakit",
+            "Card" => "Kredi Kartı",
+            "Transfer" => "Havale",
+            _ => method
+        };
+    }
+
+    private void OpenAddPaymentModal()
+    {
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", "Yeni ödeme ekleme modalı henüz hazırlanmadı.", "info");
+    }
+
+    private void ViewPaymentDetails(int paymentId)
+    {
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", $"Ödeme detayları sayfası henüz hazırlanmadı. ID: {paymentId}", "info");
+    }
+
+    private void PrintReceipt(int paymentId)
+    {
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", $"Fiş yazdırma özelliği henüz hazırlanmadı. ID: {paymentId}", "info");
+    }
+
+    private void EditPayment(PaymentModel payment)
+    {
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", $"Ödeme düzenleme modalı henüz hazırlanmadı. {payment.CustomerName}", "info");
+    }
+}
