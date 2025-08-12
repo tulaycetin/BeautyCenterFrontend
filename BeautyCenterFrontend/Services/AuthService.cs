@@ -23,6 +23,10 @@ namespace BeautyCenterFrontend.Services
         {
             try
             {
+                // Trim username and password to remove any extra spaces
+                request.Username = request.Username?.Trim();
+                request.Password = request.Password?.Trim();
+                
                 Console.WriteLine($"Attempting login with username: {request.Username}");
                 var response = await _apiService.PostAsync<LoginResponse>("api/auth/login", request);
                 

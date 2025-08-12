@@ -18,7 +18,7 @@ builder.Services.AddRazorComponents()
 // Add HttpClient for API calls
 builder.Services.AddHttpClient<ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7185/"); // API base address
+    client.BaseAddress = new Uri("http://localhost:5145/"); // API base address
 });
 
 // Add LocalStorage
