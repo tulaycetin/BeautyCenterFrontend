@@ -1,0 +1,51 @@
+@rendermode InteractiveServer
+
+<div class="sidebar @(isExpanded ? "expanded" : "") @(isHovered && !isExpanded ? "hovered" : "")" 
+     @onmouseenter="OnMouseEnter" 
+     @onmouseleave="OnMouseLeave">
+    
+    <button class="sidebar-toggle" 
+            @onclick="ToggleSidebar" 
+            @onclick:stopPropagation="true">
+        <i class="fas @(isExpanded ? "fa-times" : "fa-bars")"></i>
+    </button>
+    
+    <NavMenu IsExpanded="isExpanded || isHovered" />
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnSidebarToggle { get; set; }
+    
+    private bool isExpanded = false;
+    private bool isHovered = false;
+
+    private async Task ToggleSidebar()
+    {
+        isExpanded = !isExpanded;
+        Console.WriteLine($"Sidebar toggled: expanded = {isExpanded}");
+        await OnSidebarToggle.InvokeAsync(isExpanded);
+        StateHasChanged();
+    }
+
+    private void OnMouseEnter()
+    {
+        Console.WriteLine($"Mouse enter - expanded: {isExpanded}");
+        if (!isExpanded)
+        {
+            isHovered = true;
+            Console.WriteLine("Setting isHovered = true");
+            StateHasChanged();
+        }
+    }
+
+    private void OnMouseLeave()
+    {
+        Console.WriteLine($"Mouse leave - expanded: {isExpanded}");
+        if (!isExpanded)
+        {
+            isHovered = false;
+            Console.WriteLine("Setting isHovered = false");
+            StateHasChanged();
+        }
+    }
+}

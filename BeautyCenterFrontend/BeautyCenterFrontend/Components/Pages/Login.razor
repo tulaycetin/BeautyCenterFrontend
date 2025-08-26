@@ -1,0 +1,178 @@
+@page "/login"
+@layout MainLayout
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>Giriş Yap - Güzellik Merkezi</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-spa me-2"></i>
+                Güzellik Merkezi
+            </h2>
+            <p class="text-center text-muted">Sisteme giriş yapın</p>
+        </div>
+
+        <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin" FormName="LoginForm">
+            <DataAnnotationsValidator />
+            
+            <div class="mb-3">
+                <label for="username" class="form-label">Kullanıcı Adı</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-user"></i>
+                    </span>
+                    <InputText id="username" class="form-control" @bind-Value="loginModel.Username" placeholder="Kullanıcı adınızı giriniz" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Şifre</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Şifrenizi giriniz" />
+                </div>
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    @errorMessage
+                </div>
+            }
+
+
+            <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Giriş yapılıyor...</span>
+                }
+                else
+                {
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    <span>Giriş Yap</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="login-footer">
+            <p class="text-center text-muted">
+                <small>Güzellik Merkezi Yönetim Sistemi</small>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .login-header h2 {
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    .input-group-text {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+    }
+
+    .form-control {
+        border-left: none;
+    }
+
+    .form-control:focus {
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #667eea;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+</style>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginRequest loginModel { get; set; } = new();
+    private bool isLoading = false;
+    private string errorMessage = "";
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            var success = await AuthService.LoginAsync(loginModel);
+            
+            if (success)
+            {
+                Console.WriteLine("Login successful, navigating to home page");
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Giriş yapıldı. Anasayfaya yönlendiriliyorsunuz...", "success");
+                
+                // Wait for authentication state to update
+                await Task.Delay(500);
+                
+                // Navigate to home page with force reload to ensure auth state update
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Kullanıcı adı veya şifre hatalı!";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyiniz.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,749 @@
+@page "/reports"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CustomerService CustomerService
+@inject AppointmentService AppointmentService
+@inject PaymentService PaymentService
+@inject ServiceTypeService ServiceTypeService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Raporlar - Güzellik Merkezi</PageTitle>
+
+<div class="reports-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-chart-bar me-2"></i>
+                Raporlar
+            </h1>
+            <p class="text-muted">İş performansı ve analitik raporları</p>
+        </div>
+        <div class="date-range-selector">
+            <select class="form-select" value="@selectedPeriod" @onchange="OnPeriodChanged">
+                <option value="today">Bugün</option>
+                <option value="week">Bu Hafta</option>
+                <option value="month">Bu Ay</option>
+                <option value="quarter">Bu Çeyrek</option>
+                <option value="year">Bu Yıl</option>
+            </select>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="kpi-card revenue">
+                    <div class="kpi-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">₺@totalRevenue.ToString("N0")</div>
+                        <div class="kpi-label">Toplam Gelir</div>
+                        <div class="kpi-change @(revenueChange >= 0 ? "positive" : "negative")">
+                            <i class="fas fa-arrow-@(revenueChange >= 0 ? "up" : "down")"></i>
+                            @Math.Abs(revenueChange).ToString("N1")%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="kpi-card appointments">
+                    <div class="kpi-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">@totalAppointments</div>
+                        <div class="kpi-label">Toplam Randevu</div>
+                        <div class="kpi-change @(appointmentChange >= 0 ? "positive" : "negative")">
+                            <i class="fas fa-arrow-@(appointmentChange >= 0 ? "up" : "down")"></i>
+                            @Math.Abs(appointmentChange).ToString("N1")%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="kpi-card customers">
+                    <div class="kpi-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">@newCustomers</div>
+                        <div class="kpi-label">Yeni Müşteri</div>
+                        <div class="kpi-change @(customerChange >= 0 ? "positive" : "negative")">
+                            <i class="fas fa-arrow-@(customerChange >= 0 ? "up" : "down")"></i>
+                            @Math.Abs(customerChange).ToString("N1")%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="kpi-card average">
+                    <div class="kpi-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">₺@averageRevenue.ToString("N0")</div>
+                        <div class="kpi-label">Ortalama Gelir</div>
+                        <div class="kpi-change @(avgRevenueChange >= 0 ? "positive" : "negative")">
+                            <i class="fas fa-arrow-@(avgRevenueChange >= 0 ? "up" : "down")"></i>
+                            @Math.Abs(avgRevenueChange).ToString("N1")%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Tables -->
+        <div class="row">
+            <!-- Service Performance -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie me-2"></i>Hizmet Performansı</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (serviceStats.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Hizmet</th>
+                                            <th>Randevu</th>
+                                            <th>Gelir</th>
+                                            <th>Oran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var stat in serviceStats.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@stat.ServiceName</td>
+                                                <td>@stat.AppointmentCount</td>
+                                                <td>₺@stat.Revenue.ToString("N0")</td>
+                                                <td>
+                                                    <div class="progress" style="height: 8px;">
+                                                        <div class="progress-bar" role="progressbar" 
+                                                             style="width: @stat.Percentage%"
+                                                             aria-valuenow="@stat.Percentage" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                    <small class="text-muted">@stat.Percentage.ToString("N1")%</small>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Hizmet verisi bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-credit-card me-2"></i>Ödeme Yöntemleri</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (paymentMethodStats.Any())
+                        {
+                            <div class="payment-methods">
+                                @foreach (var method in paymentMethodStats)
+                                {
+                                    <div class="payment-method-item">
+                                        <div class="method-info">
+                                            <div class="method-icon">
+                                                <i class="fas fa-@GetPaymentMethodIcon(method.PaymentMethod)"></i>
+                                            </div>
+                                            <div class="method-details">
+                                                <div class="method-name">@GetPaymentMethodName(method.PaymentMethod)</div>
+                                                <div class="method-amount">₺@method.Amount.ToString("N0")</div>
+                                            </div>
+                                        </div>
+                                        <div class="method-stats">
+                                            <div class="method-percentage">@method.Percentage.ToString("N1")%</div>
+                                            <div class="method-count">@method.Count işlem</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Ödeme verisi bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointment Status -->
+        <div class="row">
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-calendar-alt me-2"></i>Randevu Durumu</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (appointmentStatusStats.Any())
+                        {
+                            <div class="row">
+                                @foreach (var status in appointmentStatusStats)
+                                {
+                                    <div class="col-md-3 mb-3">
+                                        <div class="status-card @status.StatusClass">
+                                            <div class="status-icon">
+                                                <i class="fas fa-@status.Icon"></i>
+                                            </div>
+                                            <div class="status-content">
+                                                <div class="status-value">@status.Count</div>
+                                                <div class="status-label">@status.StatusText</div>
+                                                <div class="status-percentage">@status.Percentage.ToString("N1")%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Randevu verisi bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .page-title {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .date-range-selector .form-select {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid;
+        transition: transform 0.3s ease;
+        height: 140px;
+        display: flex;
+        align-items: center;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .kpi-card.revenue {
+        border-left-color: #28a745;
+    }
+
+    .kpi-card.appointments {
+        border-left-color: #007bff;
+    }
+
+    .kpi-card.customers {
+        border-left-color: #17a2b8;
+    }
+
+    .kpi-card.average {
+        border-left-color: #ffc107;
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        margin-right: 20px;
+        opacity: 0.8;
+    }
+
+    .kpi-card.revenue .kpi-icon {
+        color: #28a745;
+    }
+
+    .kpi-card.appointments .kpi-icon {
+        color: #007bff;
+    }
+
+    .kpi-card.customers .kpi-icon {
+        color: #17a2b8;
+    }
+
+    .kpi-card.average .kpi-icon {
+        color: #ffc107;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+        line-height: 1;
+    }
+
+    .kpi-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .kpi-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
+    .kpi-change.positive {
+        color: #28a745;
+    }
+
+    .kpi-change.negative {
+        color: #dc3545;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .payment-method-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+    }
+
+    .method-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .method-icon {
+        font-size: 2rem;
+        margin-right: 15px;
+        color: #667eea;
+    }
+
+    .method-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .method-amount {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+
+    .method-stats {
+        text-align: right;
+    }
+
+    .method-percentage {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .method-count {
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .status-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        border-left: 4px solid;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .status-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .status-card.scheduled {
+        border-left-color: #007bff;
+    }
+
+    .status-card.completed {
+        border-left-color: #28a745;
+    }
+
+    .status-card.cancelled {
+        border-left-color: #dc3545;
+    }
+
+    .status-card.noshow {
+        border-left-color: #6c757d;
+    }
+
+    .status-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .status-card.scheduled .status-icon {
+        color: #007bff;
+    }
+
+    .status-card.completed .status-icon {
+        color: #28a745;
+    }
+
+    .status-card.cancelled .status-icon {
+        color: #dc3545;
+    }
+
+    .status-card.noshow .status-icon {
+        color: #6c757d;
+    }
+
+    .status-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .status-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .status-percentage {
+        font-size: 0.8rem;
+        color: #999;
+        margin-top: 5px;
+    }
+
+    .progress {
+        margin-top: 5px;
+    }
+
+    .progress-bar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private string selectedPeriod = "month";
+
+    // KPI Data
+    private decimal totalRevenue = 0;
+    private int totalAppointments = 0;
+    private int newCustomers = 0;
+    private decimal averageRevenue = 0;
+    private double revenueChange = 0;
+    private double appointmentChange = 0;
+    private double customerChange = 0;
+    private double avgRevenueChange = 0;
+
+    // Chart Data
+    private List<ServiceStat> serviceStats = new();
+    private List<PaymentMethodStat> paymentMethodStats = new();
+    private List<AppointmentStatusStat> appointmentStatusStats = new();
+
+    private bool authChecked = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip auth check in OnInitialized - will be done in OnAfterRender
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !authChecked)
+        {
+            authChecked = true;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            await LoadReportData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadReportData()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var (startDate, endDate) = GetDateRange(selectedPeriod);
+            var (prevStartDate, prevEndDate) = GetDateRange(selectedPeriod, true);
+
+            // Load current period data
+            var payments = await PaymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
+            var appointments = await AppointmentService.GetAppointmentsByDateRangeAsync(startDate, endDate);
+            var customers = await CustomerService.GetAllCustomersAsync();
+            var services = await ServiceTypeService.GetAllServiceTypesAsync();
+
+            // Load previous period data for comparison
+            var prevPayments = await PaymentService.GetPaymentsByDateRangeAsync(prevStartDate, prevEndDate);
+            var prevAppointments = await AppointmentService.GetAppointmentsByDateRangeAsync(prevStartDate, prevEndDate);
+
+            // Calculate KPIs
+            totalRevenue = payments.Sum(p => p.Amount);
+            totalAppointments = appointments.Count;
+            newCustomers = customers.Count(c => c.Id > 0); // Placeholder for new customers
+            averageRevenue = totalAppointments > 0 ? totalRevenue / totalAppointments : 0;
+
+            // Calculate changes
+            var prevRevenue = prevPayments.Sum(p => p.Amount);
+            var prevAppointmentCount = prevAppointments.Count;
+            var prevCustomerCount = customers.Count(c => c.Id > 0); // Placeholder for previous customers
+            var prevAvgRevenue = prevAppointmentCount > 0 ? prevRevenue / prevAppointmentCount : 0;
+
+            revenueChange = prevRevenue > 0 ? ((double)(totalRevenue - prevRevenue) / (double)prevRevenue) * 100 : 0;
+            appointmentChange = prevAppointmentCount > 0 ? ((double)(totalAppointments - prevAppointmentCount) / (double)prevAppointmentCount) * 100 : 0;
+            customerChange = prevCustomerCount > 0 ? ((double)(newCustomers - prevCustomerCount) / (double)prevCustomerCount) * 100 : 0;
+            avgRevenueChange = prevAvgRevenue > 0 ? ((double)(averageRevenue - prevAvgRevenue) / (double)prevAvgRevenue) * 100 : 0;
+
+            // Load service statistics
+            await LoadServiceStats(appointments);
+            await LoadPaymentMethodStats(payments);
+            await LoadAppointmentStatusStats(appointments);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Rapor verileri yüklenirken bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadServiceStats(List<AppointmentModel> appointments)
+    {
+        var serviceGroups = appointments.GroupBy(a => a.ServiceTypeName)
+            .Select(g => new ServiceStat
+            {
+                ServiceName = g.Key,
+                AppointmentCount = g.Count(),
+                Revenue = g.Sum(a => a.FinalPrice)
+            }).OrderByDescending(s => s.Revenue).ToList();
+
+        var totalRevenue = serviceGroups.Sum(s => s.Revenue);
+        foreach (var stat in serviceGroups)
+        {
+            stat.Percentage = totalRevenue > 0 ? (double)(stat.Revenue / totalRevenue) * 100 : 0;
+        }
+
+        serviceStats = serviceGroups;
+    }
+
+    private async Task LoadPaymentMethodStats(List<PaymentModel> payments)
+    {
+        var methodGroups = payments.GroupBy(p => p.PaymentMethod)
+            .Select(g => new PaymentMethodStat
+            {
+                PaymentMethod = g.Key,
+                Count = g.Count(),
+                Amount = g.Sum(p => p.Amount)
+            }).OrderByDescending(p => p.Amount).ToList();
+
+        var totalAmount = methodGroups.Sum(m => m.Amount);
+        foreach (var stat in methodGroups)
+        {
+            stat.Percentage = totalAmount > 0 ? (double)(stat.Amount / totalAmount) * 100 : 0;
+        }
+
+        paymentMethodStats = methodGroups;
+    }
+
+    private async Task LoadAppointmentStatusStats(List<AppointmentModel> appointments)
+    {
+        var statusGroups = appointments.GroupBy(a => a.Status)
+            .Select(g => new AppointmentStatusStat
+            {
+                Status = g.Key,
+                Count = g.Count()
+            }).ToList();
+
+        var totalCount = statusGroups.Sum(s => s.Count);
+        foreach (var stat in statusGroups)
+        {
+            stat.Percentage = totalCount > 0 ? (double)stat.Count / totalCount * 100 : 0;
+            stat.StatusText = GetStatusText(stat.Status);
+            stat.StatusClass = GetStatusClass(stat.Status);
+            stat.Icon = GetStatusIcon(stat.Status);
+        }
+
+        appointmentStatusStats = statusGroups;
+    }
+
+    private async Task OnPeriodChanged(ChangeEventArgs e)
+    {
+        selectedPeriod = e.Value?.ToString() ?? "today";
+        await LoadReportData();
+    }
+
+    private (DateTime startDate, DateTime endDate) GetDateRange(string period, bool previous = false)
+    {
+        var today = DateTime.Today;
+        var offset = previous ? -1 : 0;
+
+        return period switch
+        {
+            "today" => (today.AddDays(offset), today.AddDays(offset + 1)),
+            "week" => (today.AddDays(-7 + (offset * 7)), today.AddDays(offset * 7)),
+            "month" => (new DateTime(today.Year, today.Month, 1).AddMonths(offset), new DateTime(today.Year, today.Month, 1).AddMonths(offset + 1)),
+            "quarter" => GetQuarterRange(today, offset),
+            "year" => (new DateTime(today.Year + offset, 1, 1), new DateTime(today.Year + offset + 1, 1, 1)),
+            _ => (new DateTime(today.Year, today.Month, 1), new DateTime(today.Year, today.Month, 1).AddMonths(1))
+        };
+    }
+
+    private (DateTime startDate, DateTime endDate) GetQuarterRange(DateTime date, int offset)
+    {
+        var quarter = (date.Month - 1) / 3 + 1;
+        var startMonth = (quarter - 1) * 3 + 1;
+        var startDate = new DateTime(date.Year, startMonth, 1);
+        if (offset != 0)
+        {
+            startDate = startDate.AddMonths(offset * 3);
+        }
+        return (startDate, startDate.AddMonths(3));
+    }
+
+    private string GetPaymentMethodIcon(string method)
+    {
+        return method switch
+        {
+            "Cash" => "money-bill-wave",
+            "Card" => "credit-card",
+            "Transfer" => "university",
+            _ => "question-circle"
+        };
+    }
+
+    private string GetPaymentMethodName(string method)
+    {
+        return method switch
+        {
+            "Cash" => "Nakit",
+            "Card" => "Kredi Kartı",
+            "Transfer" => "Havale",
+            _ => method
+        };
+    }
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "Planlanmış",
+            "Completed" => "Tamamlanmış",
+            "Cancelled" => "İptal Edilmiş",
+            "NoShow" => "Gelmedi",
+            _ => status
+        };
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status.ToLower();
+    }
+
+    private string GetStatusIcon(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "clock",
+            "Completed" => "check-circle",
+            "Cancelled" => "times-circle",
+            "NoShow" => "user-times",
+            _ => "question-circle"
+        };
+    }
+
+    public class ServiceStat
+    {
+        public string ServiceName { get; set; } = "";
+        public int AppointmentCount { get; set; }
+        public decimal Revenue { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    public class PaymentMethodStat
+    {
+        public string PaymentMethod { get; set; } = "";
+        public int Count { get; set; }
+        public decimal Amount { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    public class AppointmentStatusStat
+    {
+        public string Status { get; set; } = "";
+        public int Count { get; set; }
+        public double Percentage { get; set; }
+        public string StatusText { get; set; } = "";
+        public string StatusClass { get; set; } = "";
+        public string Icon { get; set; } = "";
+    }
+}

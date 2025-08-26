@@ -1,0 +1,32 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Client._Imports).Assembly }">
+        <Found Context="routeData">
+            <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.AppLayout)" />
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Sayfa Bulunamadı</PageTitle>
+            <LayoutView Layout="typeof(Layout.AppLayout)">
+                <div class="alert alert-warning">
+                    <h4>Sayfa Bulunamadı</h4>
+                    <p>Aradığınız sayfa mevcut değil.</p>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    public class RedirectToLogin : ComponentBase
+    {
+        [Inject] NavigationManager Navigation { get; set; } = default!;
+
+        protected override void OnInitialized()
+        {
+            Console.WriteLine("RedirectToLogin: Redirecting to login page");
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}

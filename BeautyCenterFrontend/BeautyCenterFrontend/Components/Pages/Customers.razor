@@ -1,0 +1,819 @@
+@page "/customers"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using BeautyCenterFrontend.Components.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CustomerService CustomerService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Müşteri Yönetimi - Güzellik Merkezi</PageTitle>
+
+<div class="customer-management">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-users me-2"></i>
+                Müşteri Yönetimi
+            </h1>
+            <p class="text-muted">Müşteri bilgilerini görüntüle ve yönet</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenAddCustomerModal">
+            <i class="fas fa-plus me-2"></i>
+            Yeni Müşteri
+        </button>
+    </div>
+
+
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="Müşteri ara..." 
+                               value="@searchTerm" @oninput="OnSearchChanged">
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 text-md-end">
+                    <div class="btn-group w-100 w-md-auto" role="group">
+                        <button type="button" class="btn @(showActiveOnly ? "btn-primary" : "btn-outline-primary")" 
+                                @onclick="() => ToggleActiveFilter()">
+                            <i class="fas fa-user-check me-1"></i>
+                            <span class="d-none d-sm-inline">Aktif Müşteriler</span>
+                            <span class="d-sm-none">Aktif</span>
+                        </button>
+                        <button type="button" class="btn @(!showActiveOnly ? "btn-primary" : "btn-outline-primary")" 
+                                @onclick="() => ToggleActiveFilter()">
+                            <i class="fas fa-users me-1"></i>
+                            <span class="d-none d-sm-inline">Tüm Müşteriler</span>
+                            <span class="d-sm-none">Tümü</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Yükleniyor...</span>
+                    </div>
+                </div>
+            }
+            else if (filteredCustomers.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Ad Soyad</th>
+                                <th>Telefon</th>
+                                <th>E-posta</th>
+                                <th>Cinsiyet</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customer in filteredCustomers)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-3">
+                                                @customer.FirstName[0]@customer.LastName[0]
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">@customer.FullName</div>
+                                                @if (!string.IsNullOrEmpty(customer.Notes))
+                                                {
+                                                    <small class="text-muted text-truncate d-inline-block" style="max-width: 200px;">@customer.Notes</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="tel:@customer.Phone" class="text-decoration-none">
+                                            <i class="fas fa-phone me-1"></i>
+                                            @customer.Phone
+                                        </a>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(customer.Email))
+                                        {
+                                            <a href="mailto:@customer.Email" class="text-decoration-none">
+                                                <i class="fas fa-envelope me-1"></i>
+                                                @customer.Email
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(customer.Gender))
+                                        {
+                                            <span class="badge bg-@(customer.Gender == "Kadın" ? "pink" : "blue")">
+                                                @customer.Gender
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(customer.IsActive ? "success" : "danger")">
+                                            @(customer.IsActive ? "Aktif" : "Pasif")
+                                        </span>
+                                    </td>
+                               
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    @onclick="() => OpenCustomerDetailsModal(customer.Id)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                    @onclick="() => OpenEditCustomerModal(customer)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => DeleteCustomer(customer.Id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Müşteri bulunamadı</h5>
+                    <p class="text-muted">Arama kriterlerinizi değiştirin veya yeni müşteri ekleyin.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+@* Customer Add/Edit Modal *@
+<Modal IsVisible="@showCustomerModal" 
+       Title="@(isEditMode ? "Müşteri Düzenle" : "Yeni Müşteri Ekle")"
+       Icon="user-plus"
+       Size="lg"
+       OnClose="@CloseCustomerModal">
+    <ChildContent>
+        <EditForm Model="@customerModel" OnValidSubmit="@SaveCustomer" FormName="CustomerModalForm">
+            <DataAnnotationsValidator />
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="modalFirstName" class="form-label">Ad *</label>
+                    <InputText @ref="firstNameInput" id="modalFirstName" class="form-control" @bind-Value="customerModel.FirstName" placeholder="Ad giriniz" />
+                    <ValidationMessage For="@(() => customerModel.FirstName)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="modalLastName" class="form-label">Soyad *</label>
+                    <InputText id="modalLastName" class="form-control" @bind-Value="customerModel.LastName" placeholder="Soyad giriniz" />
+                    <ValidationMessage For="@(() => customerModel.LastName)" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="modalPhone" class="form-label">Telefon *</label>
+                    <InputText id="modalPhone" class="form-control" @bind-Value="customerModel.Phone" placeholder="05XX XXX XX XX" />
+                    <ValidationMessage For="@(() => customerModel.Phone)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="modalEmail" class="form-label">E-posta</label>
+                    <InputText id="modalEmail" type="email" class="form-control" @bind-Value="customerModel.Email" placeholder="ornek@email.com" />
+                    <ValidationMessage For="@(() => customerModel.Email)" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="modalBirthDate" class="form-label">Doğum Tarihi</label>
+                    <InputDate id="modalBirthDate" class="form-control" @bind-Value="customerModel.BirthDate" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="modalGender" class="form-label">Cinsiyet</label>
+                    <InputSelect id="modalGender" class="form-select" @bind-Value="customerModel.Gender">
+                        <option value="">Seçiniz</option>  
+                        <option value="Kadın">Kadın</option>
+                        <option value="Erkek">Erkek</option>
+                        <option value="Diğer">Diğer</option>
+                    </InputSelect>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="modalAddress" class="form-label">Adres</label>
+                <InputTextArea id="modalAddress" class="form-control" rows="2" @bind-Value="customerModel.Address" placeholder="Adres giriniz" />
+            </div>
+            <div class="mb-3">
+                <label for="modalNotes" class="form-label">Notlar</label>
+                <InputTextArea id="modalNotes" class="form-control" rows="2" @bind-Value="customerModel.Notes" placeholder="Müşteri hakkında notlar" />
+            </div>
+            <div class="form-check mb-3">
+                <InputCheckbox id="modalIsActive" class="form-check-input" @bind-Value="customerModel.IsActive" />
+                <label class="form-check-label" for="modalIsActive">
+                    Aktif müşteri
+                </label>
+            </div>
+        </EditForm>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="CloseCustomerModal">
+            <i class="fas fa-times me-1"></i>
+            İptal
+        </button>
+        <button type="button" class="btn btn-success" @onclick="SaveCustomer" disabled="@isSaving">
+            @if (isSaving)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            <i class="fas fa-save me-1"></i>
+            @(isEditMode ? "Güncelle" : "Kaydet")
+        </button>
+    </FooterContent>
+</Modal>
+
+@* Customer Details Modal *@
+<Modal IsVisible="@showCustomerDetailsModal" 
+       Title="Müşteri Detayları"
+       Icon="user"
+       Size="lg"
+       OnClose="@CloseCustomerDetailsModal">
+    <ChildContent>
+        @if (selectedCustomerDetails != null)
+        {
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white py-2">
+                            <h6 class="card-title mb-0 small">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Kişisel Bilgiler
+                            </h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="row mb-2">
+                                <div class="col-5"><small><strong>Ad Soyad:</strong></small></div>
+                                <div class="col-7"><small>@selectedCustomerDetails.FullName</small></div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5"><small><strong>Telefon:</strong></small></div>
+                                <div class="col-7">
+                                    <a href="tel:@selectedCustomerDetails.Phone" class="text-decoration-none">
+                                        <small>@selectedCustomerDetails.Phone</small>
+                                    </a>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedCustomerDetails.Email))
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-5"><small><strong>E-posta:</strong></small></div>
+                                    <div class="col-7">
+                                        <a href="mailto:@selectedCustomerDetails.Email" class="text-decoration-none">
+                                            <small>@selectedCustomerDetails.Email</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                            @if (selectedCustomerDetails.BirthDate.HasValue)
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-5"><small><strong>Doğum Tarihi:</strong></small></div>
+                                    <div class="col-7"><small>@selectedCustomerDetails.BirthDate.Value.ToString("dd.MM.yyyy")</small></div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(selectedCustomerDetails.Gender))
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-5"><small><strong>Cinsiyet:</strong></small></div>
+                                    <div class="col-7"><small>@selectedCustomerDetails.Gender</small></div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(selectedCustomerDetails.Address))
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-5"><small><strong>Adres:</strong></small></div>
+                                    <div class="col-7"><small>@selectedCustomerDetails.Address</small></div>
+                                </div>
+                            }
+                            <div class="row mb-2">
+                                <div class="col-5"><small><strong>Durum:</strong></small></div>
+                                <div class="col-7">
+                                    <span class="badge bg-@(selectedCustomerDetails.IsActive ? "success" : "danger")">
+                                        @(selectedCustomerDetails.IsActive ? "Aktif" : "Pasif")
+                                    </span>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedCustomerDetails.Notes))
+                            {
+                                <div class="row mb-3">
+                                    <div class="col-sm-4"><strong>Notlar:</strong></div>
+                                    <div class="col-sm-8">@selectedCustomerDetails.Notes</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Finansal Özet
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-sm-6"><strong>Toplam Ödeme:</strong></div>
+                                <div class="col-sm-6">
+                                    <span class="fw-bold text-success">₺@selectedCustomerDetails.TotalPaid.ToString("N2")</span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-6"><strong>Kalan Bakiye:</strong></div>
+                                <div class="col-sm-6">
+                                    <span class="fw-bold @(selectedCustomerDetails.RemainingBalance > 0 ? "text-danger" : "text-success")">
+                                        ₺@selectedCustomerDetails.RemainingBalance.ToString("N2")
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-6"><strong>Toplam Randevu:</strong></div>
+                                <div class="col-sm-6">
+                                    <span class="fw-bold">@selectedCustomerDetails.Appointments.Count</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (selectedCustomerDetails.Appointments.Any())
+            {
+                <div class="card mt-3 shadow-sm">
+                    <div class="card-header bg-info text-white py-2">
+                        <h6 class="card-title mb-0 small">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Randevu Geçmişi (@selectedCustomerDetails.Appointments.Count)
+                        </h6>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th><small>Tarih</small></th>
+                                        <th><small>Hizmet</small></th>
+                                        <th><small>Durum</small></th>
+                                        <th><small>Fiyat</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var appointment in selectedCustomerDetails.Appointments.OrderByDescending(a => a.AppointmentDate))
+                                    {
+                                        <tr>
+                                            <td><small>@appointment.AppointmentDate.ToString("dd.MM.yyyy")</small></td>
+                                            <td><small>@appointment.ServiceTypeName</small></td>
+                                            <td>
+                                                <span class="badge bg-@(GetAppointmentStatusColor(appointment.Status)) badge-sm">
+                                                    <small>@appointment.StatusText</small>
+                                                </span>
+                                            </td>
+                                            <td><small class="fw-bold">₺@appointment.FinalPrice.ToString("N2")</small></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (selectedCustomerDetails.Payments.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Ödeme Geçmişi (@selectedCustomerDetails.Payments.Count)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Tutar</th>
+                                        <th>Yöntem</th>
+                                        <th>Açıklama</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var payment in selectedCustomerDetails.Payments.OrderByDescending(p => p.PaymentDate))
+                                    {
+                                        <tr>
+                                            <td>@payment.PaymentDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>
+                                                <span class="fw-bold text-success">₺@payment.Amount.ToString("N2")</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info badge-sm">@payment.PaymentMethodText</span>
+                                            </td>
+                                            <td>@(payment.Description ?? "-")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn btn-secondary" @onclick="CloseCustomerDetailsModal">
+            <i class="fas fa-times me-1"></i>
+            Kapat
+        </button>
+        @if (selectedCustomerDetails != null)
+        {
+            <button type="button" class="btn btn-warning" @onclick="() => OpenEditCustomerModal(selectedCustomerDetails)">
+                <i class="fas fa-edit me-1"></i>
+                Düzenle
+            </button>
+        }
+    </FooterContent>
+</Modal>
+
+<style>
+    .page-title {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .table th {
+        border-top: none;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .bg-pink {
+        background-color: #e91e63 !important;
+    }
+
+    .bg-blue {
+        background-color: #2196f3 !important;
+    }
+
+    .btn-group .btn {
+        border-radius: 4px;
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+</style>
+
+@code {
+    private List<CustomerModel> customers = new();
+    private List<CustomerModel> filteredCustomers = new();
+    private bool isLoading = true;
+    private string searchTerm = "";
+    private bool showActiveOnly = true;
+    
+    // Form variables
+    private CustomerCreateRequest customerModel = new();
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private bool showCustomerModal = false;
+    private InputText? firstNameInput;
+
+    // Details variables
+    private CustomerWithDetailsModel? selectedCustomerDetails;
+    private int selectedCustomerId = 0;
+    private bool showCustomerDetailsModal = false;
+
+    private bool authChecked = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip auth check in OnInitialized - will be done in OnAfterRender
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !authChecked)
+        {
+            authChecked = true;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            await LoadCustomers();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            isLoading = true;
+            
+            if (showActiveOnly)
+            {
+                customers = await CustomerService.GetActiveCustomersAsync();
+            }
+            else
+            {
+                customers = await CustomerService.GetAllCustomersAsync();
+            }
+            
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteriler yüklenirken bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredCustomers = customers.Where(c => 
+            string.IsNullOrEmpty(searchTerm) || 
+            c.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            c.Phone.Contains(searchTerm) ||
+            (c.Email != null && c.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+        await Task.CompletedTask;
+    }
+
+    private async Task ToggleActiveFilter()
+    {
+        showActiveOnly = !showActiveOnly;
+        await LoadCustomers();
+    }
+
+    private async Task OpenAddCustomerModal()
+    {
+        isEditMode = false;
+        customerModel = new CustomerCreateRequest 
+        { 
+            IsActive = true,
+            BirthDate = null
+        };
+        showCustomerModal = true;
+        
+        StateHasChanged();
+        await Task.Delay(100);
+        if (firstNameInput?.Element != null)
+        {
+            await firstNameInput.Element.Value.FocusAsync();
+        }
+    }
+
+    private void CloseCustomerModal()
+    {
+        showCustomerModal = false;
+        isEditMode = false;
+        customerModel = new CustomerCreateRequest();
+    }
+
+    private async Task OpenCustomerDetailsModal(int customerId)
+    {
+        try
+        {
+            selectedCustomerDetails = await CustomerService.GetCustomerWithDetailsAsync(customerId);
+            if (selectedCustomerDetails != null)
+            {
+                showCustomerDetailsModal = true;
+                StateHasChanged();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteri detayları yüklenemedi.", "danger");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteri detayları yüklenirken bir hata oluştu.", "danger");
+        }
+    }
+
+    private void CloseCustomerDetailsModal()
+    {
+        showCustomerDetailsModal = false;
+        selectedCustomerDetails = null;
+    }
+
+    private async Task OpenEditCustomerModal(CustomerModel customer)
+    {
+        isEditMode = true;
+        selectedCustomerId = customer.Id;
+        customerModel = new CustomerCreateRequest
+        {
+            FirstName = customer.FirstName,
+            LastName = customer.LastName,
+            Phone = customer.Phone,
+            Email = customer.Email,
+            BirthDate = customer.BirthDate,
+            Gender = customer.Gender,
+            Address = customer.Address,
+            Notes = customer.Notes,
+            IsActive = customer.IsActive
+        };
+        
+        // Close details modal if open
+        showCustomerDetailsModal = false;
+        
+        // Show edit modal
+        showCustomerModal = true;
+        StateHasChanged();
+        
+        // Focus first input after render
+        await Task.Delay(100);
+        if (firstNameInput?.Element != null)
+        {
+            await firstNameInput.Element.Value.FocusAsync();
+        }
+    }
+
+    private async Task SaveCustomer()
+    {
+        try
+        {
+            isSaving = true;
+            
+            if (isEditMode)
+            {
+                // Convert to CustomerModel for update
+                var customerUpdateModel = new CustomerModel
+                {
+                    Id = selectedCustomerId,
+                    FirstName = customerModel.FirstName,
+                    LastName = customerModel.LastName,
+                    Phone = customerModel.Phone,
+                    Email = customerModel.Email,
+                    BirthDate = customerModel.BirthDate,
+                    Gender = customerModel.Gender,
+                    Address = customerModel.Address,
+                    Notes = customerModel.Notes,
+                    IsActive = customerModel.IsActive
+                };
+
+                var success = await CustomerService.UpdateCustomerAsync(selectedCustomerId, customerUpdateModel);
+                if (success)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Müşteri başarıyla güncellendi.", "success");
+                    showCustomerModal = false;
+                    isEditMode = false;
+                    await LoadCustomers();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteri güncellenirken bir hata oluştu.", "danger");
+                }
+            }
+            else
+            {
+                try
+                {
+                    var result = await CustomerService.CreateCustomerWithErrorAsync(customerModel);
+                    if (result.Success)
+                    {
+                        await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Müşteri başarıyla eklendi.", "success");
+                        showCustomerModal = false;
+                        isEditMode = false;
+                        customerModel = new CustomerCreateRequest();
+                        await LoadCustomers();
+                    }
+                    else
+                    {
+                        // Show specific error message from API
+                        var errorMessage = result.ErrorMessage ?? "Müşteri eklenirken bir hata oluştu.";
+                        if (errorMessage.Contains("phone number already exists"))
+                        {
+                            errorMessage = "Bu telefon numarası ile kayıtlı bir müşteri zaten bulunmaktadır.";
+                        }
+                        await JSRuntime.InvokeVoidAsync("showToast", "Hata!", errorMessage, "danger");
+                    }
+                }
+                catch (Exception createEx)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Hata!", $"Müşteri ekleme sırasında hata: {createEx.Message}", "danger");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "İşlem sırasında bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteCustomer(int customerId)
+    {
+        // TODO: Implement delete confirmation
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bu müşteriyi silmek istediğinizden emin misiniz?");
+        if (confirmed)
+        {
+            try
+            {
+                var success = await CustomerService.DeleteCustomerAsync(customerId);
+                if (success)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Müşteri silindi.", "success");
+                    await LoadCustomers();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteri silinirken bir hata oluştu.", "danger");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteri silinirken bir hata oluştu.", "danger");
+            }
+        }
+    }
+
+    private string GetAppointmentStatusColor(string status)
+    {
+        return status switch
+        {
+            "Scheduled" => "primary",
+            "Completed" => "success",
+            "Cancelled" => "danger",
+            "NoShow" => "secondary",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,544 @@
+﻿@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CustomerService CustomerService
+@inject AppointmentService AppointmentService
+@inject PaymentService PaymentService
+@inject ServiceTypeService ServiceTypeService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard - Güzellik Merkezi</PageTitle>
+
+<div class="dashboard">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="dashboard-title">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Gülhan Çetin Güzellik Merkezi
+            </h1>
+            <p class="text-muted">Güzellik merkezi yönetim paneli</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <a href="/customers" class="text-decoration-none">
+                    <div class="stat-card bg-gradient-customer text-dark clickable">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@totalCustomers</h3>
+                            <p>Toplam Müşteri</p>
+                        </div>
+                        <div class="stat-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <a href="/appointments" class="text-decoration-none">
+                    <div class="stat-card bg-success text-white clickable">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@todayAppointments</h3>
+                            <p>Bugünkü Randevular</p>
+                        </div>
+                        <div class="stat-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <a href="/appointments" class="text-decoration-none">
+                    <div class="stat-card bg-warning text-white clickable">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>@upcomingAppointments</h3>
+                            <p>Yaklaşan Randevular</p>
+                        </div>
+                        <div class="stat-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <a href="/payments" class="text-decoration-none">
+                    <div class="stat-card bg-info text-white clickable">
+                        <div class="stat-icon">
+                            <i class="fas fa-lira-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>₺@monthlyRevenue.ToString("N0")</h3>
+                            <p>Aylık Gelir</p>
+                        </div>
+                        <div class="stat-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Hızlı Eylemler -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Hızlı İşlemler</h5>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/appointments" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-calendar-plus quick-action-icon"></i>
+                        <p class="mb-0">Yeni Randevu</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/customers" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-user-plus quick-action-icon"></i>
+                        <p class="mb-0">Yeni Müşteri</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/payments" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-money-bill-wave quick-action-icon"></i>
+                        <p class="mb-0">Ödeme Al</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/services" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-spa quick-action-icon"></i>
+                        <p class="mb-0">Hizmetler</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/reports" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-chart-bar quick-action-icon"></i>
+                        <p class="mb-0">Raporlar</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4 col-6 mb-3">
+                <a href="/settings" class="text-decoration-none">
+                    <div class="quick-action-card">
+                        <i class="fas fa-cog quick-action-icon"></i>
+                        <p class="mb-0">Ayarlar</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-calendar-alt me-2"></i>Bugünkü Randevular</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (todayAppointmentsList.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table-hover table">
+                                    <thead>
+                                        <tr>
+                                            <th>Saat</th>
+                                            <th>Müşteri</th>
+                                            <th>Hizmet</th>
+                                            <th>Durum</th>
+                                            <th>Fiyat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var appointment in todayAppointmentsList.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@appointment.AppointmentDate.ToString("HH:mm")</td>
+                                                <td>@appointment.CustomerName</td>
+                                                <td>@appointment.ServiceTypeName</td>
+                                                <td>
+                                                    <span class="badge bg-@(appointment.Status == "Scheduled" ? "primary" : appointment.Status == "Completed" ? "success" : "warning")">
+                                                        @appointment.StatusText
+                                                    </span>
+                                                </td>
+                                                <td>₺@appointment.FinalPrice.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="py-4 text-center">
+                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Bugün için randevu bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 mb-4">
+                <!-- Gelir Özeti -->
+                <div class="card mb-4">
+                    <div class="card-body revenue-card">
+                        <h5 class="text-white mb-3"><i class="fas fa-chart-line me-2"></i>Bu Ay Gelir Özeti</h5>
+                        <div class="revenue-amount">₺@monthlyRevenue.ToString("N0")</div>
+                        <div class="mt-3">
+                            <div class="row text-white-50">
+                                <div class="col-6">
+                                    <small>Geçen Ay</small><br>
+                                    <strong>₺@(monthlyRevenue * 0.85m).ToString("N0")</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <small>Değişim</small><br>
+                                    <strong class="text-success">+15%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Popüler Hizmetler -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-star me-2"></i>Popüler Hizmetler</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (popularServices.Any())
+                        {
+                            @foreach (var service in popularServices)
+                            {
+                                <div class="service-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@service.Name</h6>
+                                            <small class="text-muted">@service.PriceText</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-primary">@service.DurationText</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="py-4 text-center">
+                                <i class="fas fa-spa fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Hizmet bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yaklaşan Randevular -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clock me-2"></i>Yaklaşan Randevular (Önümüzdeki 7 Gün)</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (upcomingAppointmentsList.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Tarih</th>
+                                            <th>Saat</th>
+                                            <th>Müşteri</th>
+                                            <th>Hizmet</th>
+                                            <th>Telefon</th>
+                                            <th>Durum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var appointment in upcomingAppointmentsList.Take(10))
+                                        {
+                                            <tr>
+                                                <td>@appointment.AppointmentDate.ToString("dd.MM.yyyy")</td>
+                                                <td>@appointment.AppointmentDate.ToString("HH:mm")</td>
+                                                <td>@appointment.CustomerName</td>
+                                                <td>@appointment.ServiceTypeName</td>
+                                                <td>-</td>
+                                                <td>
+                                                    <span class="badge bg-primary">Planlanmış</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Önümüzdeki 7 gün için randevu bulunmamaktadır.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .dashboard-title {
+        color: #667eea !important;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .stat-card {
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card.clickable {
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card.clickable:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-arrow {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.5rem;
+        opacity: 0.7;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card.clickable:hover .stat-arrow {
+        opacity: 1;
+        transform: translateY(-50%) translateX(5px);
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-right: 20px;
+        opacity: 0.8;
+    }
+
+    .stat-content h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .stat-content p {
+        margin: 0;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .service-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+
+    .table th {
+        border-top: none;
+        border-bottom: 2px solid #dee2e6;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .bg-gradient-customer {
+        background: linear-gradient(135deg, #FF6B9D 0%, #FFC0CB 100%);
+        box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+    }
+
+    .bg-gradient-customer:hover {
+        box-shadow: 0 8px 25px rgba(255, 107, 157, 0.4);
+    }
+
+    .quick-action-card {
+        border-radius: 15px;
+        padding: 15px;
+        text-align: center;
+        background: white;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+    }
+
+    .quick-action-card:hover {
+        border-color: #667eea;
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(102, 126, 234, 0.2);
+    }
+
+    .quick-action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        color: #667eea;
+    }
+
+    .revenue-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+    }
+
+    .revenue-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private int totalCustomers = 0;
+    private int todayAppointments = 0;
+    private int upcomingAppointments = 0;
+    private decimal monthlyRevenue = 0;
+    private List<AppointmentModel> todayAppointmentsList = new();
+    private List<AppointmentModel> upcomingAppointmentsList = new();
+    private List<ServiceTypeModel> popularServices = new();
+
+    private bool authChecked = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip auth check in OnInitialized - will be done in OnAfterRender
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !authChecked)
+        {
+            authChecked = true;
+            Console.WriteLine("Home: Checking authentication after render");
+            
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            Console.WriteLine($"Home: IsAuthenticated = {authState.User.Identity?.IsAuthenticated}");
+            
+            if (authState.User.Identity?.IsAuthenticated != true)
+            {
+                Console.WriteLine("Home: Not authenticated, redirecting to login");
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            
+            Console.WriteLine("Home: Authenticated, loading dashboard data");
+            await LoadDashboardData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Load customers
+            var customers = await CustomerService.GetActiveCustomersAsync();
+            totalCustomers = customers.Count;
+
+            // Load today's appointments
+            todayAppointmentsList = await AppointmentService.GetTodaysAppointmentsAsync();
+            todayAppointments = todayAppointmentsList.Count;
+
+            // Load upcoming appointments (next 7 days)
+            var startDate = DateTime.Today.AddDays(1);
+            var endDate = DateTime.Today.AddDays(7);
+            upcomingAppointmentsList = await AppointmentService.GetAppointmentsByDateRangeAsync(startDate, endDate);
+            upcomingAppointments = upcomingAppointmentsList.Count;
+
+            // Load monthly revenue
+            var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            var monthlyPayments = await PaymentService.GetPaymentsByDateRangeAsync(monthStart, monthEnd);
+            monthlyRevenue = monthlyPayments.Sum(p => p.Amount);
+
+            // Load popular services
+            popularServices = await ServiceTypeService.GetActiveServiceTypesAsync();
+            popularServices = popularServices.Take(5).ToList();
+
+            await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Dashboard yüklendi.", "success");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Dashboard yüklenirken bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

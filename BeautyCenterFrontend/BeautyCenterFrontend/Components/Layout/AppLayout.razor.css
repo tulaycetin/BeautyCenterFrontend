@@ -1,0 +1,77 @@
+.page {
+    position: relative;
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+
+.main-content {
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    min-height: 100vh;
+    background: #f8f9fa;
+    margin-left: 60px;
+    width: calc(100% - 60px);
+    position: relative;
+    z-index: 10;
+}
+
+.main-content.collapsed {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+    position: relative;
+    z-index: 10;
+}
+
+.main-content.expanded {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    position: relative;
+    z-index: 10;
+}
+
+.top-row {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.content {
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 768px) {
+    .main-content,
+    .main-content.collapsed,
+    .main-content.expanded {
+        margin-left: 0 !important ;
+        width: 100% !important;
+    }
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

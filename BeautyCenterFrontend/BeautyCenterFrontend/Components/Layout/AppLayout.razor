@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+
+<div class="page @(isExpanded ? "sidebar-expanded" : "")" data-expanded="@isExpanded">
+    <Sidebar OnSidebarToggle="OnSidebarToggle" />
+
+    <main class="main-content @(isExpanded ? "expanded" : "collapsed")">
+        <TopBar />
+        
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private bool isExpanded = false;
+
+    private void OnSidebarToggle(bool expanded)
+    {
+        isExpanded = expanded;
+        StateHasChanged();
+    }
+}

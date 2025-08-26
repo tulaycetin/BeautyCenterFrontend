@@ -1,0 +1,68 @@
+@page "/test"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Test - Güzellik Merkezi</PageTitle>
+
+<div class="container mt-4">
+    <h1>Authentication Test</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5>Authentication Status:</h5>
+            <p><strong>Is Authenticated:</strong> @isAuthenticated</p>
+            <p><strong>User Name:</strong> @userName</p>
+            <p><strong>User Claims:</strong></p>
+            <ul>
+                @foreach (var claim in userClaims)
+                {
+                    <li>@claim.Type: @claim.Value</li>
+                }
+            </ul>
+            
+            <button class="btn btn-primary" @onclick="CheckAuthStatus">Refresh Auth Status</button>
+            <button class="btn btn-success" @onclick="GoToHome">Go to Home</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string userName = "";
+    private List<System.Security.Claims.Claim> userClaims = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthStatus();
+    }
+
+    private async Task CheckAuthStatus()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+            userName = authState.User.Identity?.Name ?? "Anonymous";
+            userClaims = authState.User.Claims.ToList();
+            
+            Console.WriteLine($"Test page - Is Authenticated: {isAuthenticated}");
+            Console.WriteLine($"Test page - User Name: {userName}");
+            
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Test page error: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.log", $"Test page error: {ex.Message}");
+        }
+    }
+
+    private void GoToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}
+
+@inject NavigationManager Navigation
