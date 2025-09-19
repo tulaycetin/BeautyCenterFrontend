@@ -97,48 +97,7 @@ Güzellik merkezleri için geliştirilmiş kapsamlı yönetim sistemi. Multi-ten
 - **Middleware**: TenantMiddleware ile otomatik tenant tespiti
 - **Security**: Tenant bazlı veri güvenliği
 
-## 🚀 Kurulum
 
-### Gereksinimler
-- **.NET 8 SDK** veya daha yenisi
-- **SQL Server** (LocalDB, Express veya Full)
-- **Visual Studio 2022** veya **VS Code**
-
-### Adım 1: Repository'yi Clone Edin
-```bash
-git clone https://github.com/tulaycetin/BeautyCenterFrontend.git
-cd BeautyCenterFrontend
-```
-
-### Adım 2: Veritabanı Bağlantısını Yapılandırın
-`BeautyCenterApi/appsettings.json` dosyasında bağlantı dizesini güncelleyin:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=BeautyCenterDb;Trusted_Connection=true;MultipleActiveResultSets=true"
-  }
-}
-```
-
-### Adım 3: Veritabanı Migrations
-```bash
-cd BeautyCenterApi
-dotnet ef database update
-```
-
-### Adım 4: Projeleri Çalıştırın
-
-**Backend API'yi başlatın:**
-```bash
-cd BeautyCenterApi
-dotnet run
-```
-
-**Frontend'i başlatın:**
-```bash
-cd BeautyCenterFrontend/BeautyCenterFrontend
-dotnet run
-```
 
 ## 🔑 Demo Hesapları
 
@@ -151,23 +110,6 @@ dotnet run
 - **Arda Güzellik Merkezi**: `arda` / `admin123`
 - **Elif Güzellik Merkezi**: `elif` / `admin123`
 - **Demo Güzellik Merkezi**: `demo` / `admin123`
-
-## 📱 Kullanım
-
-### 1. SuperAdmin Panel
-- `http://localhost:5000` adresinden sisteme giriş yapın
-- SuperAdmin hesabı ile tüm tenant'ları yönetin
-- Yeni kullanıcılar ve tenant'lar oluşturun
-
-### 2. Tenant Admin Panel
-- Kendi güzellik merkezinizin verilerini yönetin
-- Müşteri, randevu ve ödeme işlemlerini takip edin
-- Raporları görüntüleyin ve analiz edin
-
-### 3. Employee Panel
-- Randevu oluşturma ve güncelleme
-- Müşteri bilgilerini görüntüleme
-- Temel raporlama işlemleri
 
 ## 🗂️ Proje Yapısı
 
