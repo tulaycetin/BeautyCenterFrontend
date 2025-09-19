@@ -168,7 +168,7 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için `LICENSE` dosy
 ## 📞 İletişim
 
 **Proje Maintainer**: Tülay Çetin
-**Email**: [email@example.com]
+**Email**: [tulayctn73@gmail.com]
 **GitHub**: [@tulaycetin](https://github.com/tulaycetin)
 
 ## 🙏 Teşekkürler
