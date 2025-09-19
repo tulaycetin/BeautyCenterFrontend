@@ -51,9 +51,18 @@ namespace BeautyCenterApi.Mappings
             // Payment mappings
             CreateMap<Payment, PaymentDto>()
                 .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => $"{src.Customer.FirstName} {src.Customer.LastName}"))
-                .ForMember(dest => dest.ServiceTypeName, opt => opt.MapFrom(src => src.Appointment != null ? src.Appointment.ServiceType.Name : null));
+                .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src => src.Customer.Phone))
+                .ForMember(dest => dest.ServiceTypeName, opt => opt.MapFrom(src => src.Appointment != null ? src.Appointment.ServiceType.Name : null))
+                .ForMember(dest => dest.ServicePrice, opt => opt.MapFrom(src => src.Appointment != null ? src.Appointment.ServiceType.Price : (decimal?)null))
+                .ForMember(dest => dest.AppointmentDate, opt => opt.MapFrom(src => src.Appointment != null ? src.Appointment.AppointmentDate : (DateTime?)null))
+                .ForMember(dest => dest.Installments, opt => opt.MapFrom(src => src.Installments));
 
             CreateMap<CreatePaymentDto, Payment>()
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+            
+            // PaymentInstallment mappings
+            CreateMap<PaymentInstallment, PaymentInstallmentDto>().ReverseMap();
+            CreateMap<CreateInstallmentDto, PaymentInstallment>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
         }
     }

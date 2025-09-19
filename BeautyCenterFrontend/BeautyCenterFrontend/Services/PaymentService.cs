@@ -22,6 +22,23 @@ namespace BeautyCenterFrontend.Services
             return await _apiService.GetAsync<PaymentModel>($"api/payments/{id}");
         }
 
+        public async Task<PaymentSummaryModel?> GetPaymentSummaryAsync()
+        {
+            return await _apiService.GetAsync<PaymentSummaryModel>("api/payments/summary");
+        }
+
+        public async Task<List<PendingAppointmentModel>> GetPendingAppointmentsAsync()
+        {
+            var result = await _apiService.GetAsync<List<PendingAppointmentModel>>("api/payments/pending-appointments");
+            return result ?? new List<PendingAppointmentModel>();
+        }
+
+        public async Task<List<dynamic>> GetOverdueInstallmentsAsync()
+        {
+            var result = await _apiService.GetAsync<List<dynamic>>("api/payments/installments/overdue");
+            return result ?? new List<dynamic>();
+        }
+
         public async Task<List<PaymentModel>> GetPaymentsByCustomerAsync(int customerId)
         {
             var result = await _apiService.GetAsync<List<PaymentModel>>($"api/payments/customer/{customerId}");
@@ -46,9 +63,21 @@ namespace BeautyCenterFrontend.Services
             return result ?? new List<PaymentModel>();
         }
 
-        public async Task<PaymentModel?> CreatePaymentAsync(CreatePaymentModel payment)
+        public async Task<bool> CreatePaymentAsync(CreatePaymentModel payment)
         {
-            return await _apiService.PostAsync<PaymentModel>("api/payments", payment);
+            var result = await _apiService.PostAsync<PaymentModel>("api/payments", payment);
+            return result != null;
+        }
+
+        public async Task<bool> AddPaymentAsync(int id, UpdatePaymentModel payment)
+        {
+            return await _apiService.PutAsync($"api/payments/{id}/add-payment", payment);
+        }
+
+        public async Task<bool> PayInstallmentAsync(int installmentId, PayInstallmentModel payment)
+        {
+            var result = await _apiService.PostAsync<object>($"api/payments/installment/{installmentId}/pay", payment);
+            return result != null;
         }
 
         public async Task<bool> UpdatePaymentAsync(int id, CreatePaymentModel payment)

@@ -8,6 +8,7 @@ using BeautyCenterApi.Interfaces;
 using BeautyCenterApi.Repositories;
 using BeautyCenterApi.Services;
 using BeautyCenterApi.Mappings;
+using BeautyCenterApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,7 +68,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Configure AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+// Register multi-tenant services
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, TenantService>();
+
 // Register repositories
+builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IServiceTypeRepository, ServiceTypeRepository>();
@@ -82,7 +88,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.WithOrigins("https://localhost:7051", "http://localhost:5248")
+        builder.WithOrigins("http://localhost:5000", "https://localhost:7051")
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
@@ -113,8 +119,19 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
+
+// Multi-tenant middleware
+app.UseMiddleware<TenantMiddleware>();
+
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Data Seeder'ı çalıştır
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<BeautyCenterDbContext>();
+    await DataSeeder.UpdateUsersAndTenants(context);
+}
 
 app.Run();

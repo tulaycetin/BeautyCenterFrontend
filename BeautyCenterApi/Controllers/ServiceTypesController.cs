@@ -87,7 +87,7 @@ namespace BeautyCenterApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "SuperAdmin,TenantAdmin")]
         public async Task<ActionResult<ServiceTypeDto>> CreateServiceType([FromBody] CreateServiceTypeDto createServiceTypeDto)
         {
             try
@@ -112,7 +112,7 @@ namespace BeautyCenterApi.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "SuperAdmin,TenantAdmin")]
         public async Task<IActionResult> UpdateServiceType(int id, [FromBody] UpdateServiceTypeDto serviceTypeDto)
         {
             try
@@ -143,7 +143,7 @@ namespace BeautyCenterApi.Controllers
         }
 
         [HttpPut("{id}/status")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "SuperAdmin,TenantAdmin")]
         public async Task<IActionResult> UpdateServiceTypeStatus(int id, [FromBody] object statusUpdate)
         {
             try
@@ -179,7 +179,7 @@ namespace BeautyCenterApi.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "SuperAdmin,TenantAdmin")]
         public async Task<IActionResult> DeleteServiceType(int id)
         {
             try

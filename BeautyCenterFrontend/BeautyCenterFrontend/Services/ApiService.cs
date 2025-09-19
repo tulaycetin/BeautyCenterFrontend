@@ -20,7 +20,7 @@ namespace BeautyCenterFrontend.Services
             // Ensure BaseAddress is set
             if (_httpClient.BaseAddress == null)
             {
-                _httpClient.BaseAddress = new Uri("https://localhost:7185/");
+                _httpClient.BaseAddress = new Uri("http://localhost:5001/");
             }
             
             Console.WriteLine($"ApiService initialized with BaseAddress: {_httpClient.BaseAddress}");

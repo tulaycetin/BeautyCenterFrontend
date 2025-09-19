@@ -10,7 +10,6 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-
 <PageTitle>Dashboard - Güzellik Merkezi</PageTitle>
 
 <div class="dashboard">
@@ -18,9 +17,9 @@
         <div class="col-12">
             <h1 class="dashboard-title">
                 <i class="fas fa-tachometer-alt me-2"></i>
-                Gülhan Çetin Güzellik Merkezi
+                @dashboardTitle
             </h1>
-            <p class="text-muted">Güzellik merkezi yönetim paneli</p>
+            <p class="text-muted">@dashboardSubtitle</p>
         </div>
     </div>
 
@@ -470,6 +469,11 @@
     private List<AppointmentModel> upcomingAppointmentsList = new();
     private List<ServiceTypeModel> popularServices = new();
 
+    private string dashboardTitle = "Güzellik Merkezi";
+    private string dashboardSubtitle = "Yönetim Paneli";
+    private string userRole = "";
+    private string userName = "";
+
     private bool authChecked = false;
 
     protected override async Task OnInitializedAsync()
@@ -483,20 +487,61 @@
         {
             authChecked = true;
             Console.WriteLine("Home: Checking authentication after render");
-            
+
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             Console.WriteLine($"Home: IsAuthenticated = {authState.User.Identity?.IsAuthenticated}");
-            
+
             if (authState.User.Identity?.IsAuthenticated != true)
             {
                 Console.WriteLine("Home: Not authenticated, redirecting to login");
                 Navigation.NavigateTo("/login");
                 return;
             }
-            
+
+            // Role ve kullanıcı bilgilerini al
+            userRole = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+            userName = authState.User.FindFirst("FirstName")?.Value ?? "";
+
+            // SuperAdmin ise özel sayfasına yönlendir
+            if (userRole == "SuperAdmin")
+            {
+                Navigation.NavigateTo("/superadmin");
+                return;
+            }
+
+            // Tenant bilgisini al ve başlığı ayarla
+            await SetDashboardTitleByTenant();
+
             Console.WriteLine("Home: Authenticated, loading dashboard data");
             await LoadDashboardData();
             StateHasChanged();
+        }
+    }
+
+    private async Task SetDashboardTitleByTenant()
+    {
+        try
+        {
+            // Kullanıcı bilgilerinden tenant bilgisini al
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var firstName = authState.User.FindFirst("FirstName")?.Value ?? "";
+            var lastName = authState.User.FindFirst("LastName")?.Value ?? "";
+
+            // Tenant bazlı başlık ayarla
+            if (!string.IsNullOrEmpty(firstName))
+            {
+                dashboardTitle = $"{firstName} Güzellik Merkezi";
+                dashboardSubtitle = $"{firstName} {lastName} - Yönetim Paneli";
+            }
+            else
+            {
+                dashboardTitle = "Güzellik Merkezi";
+                dashboardSubtitle = "Yönetim Paneli";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error setting dashboard title: {ex.Message}");
         }
     }
 
@@ -524,7 +569,7 @@
             var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var monthEnd = monthStart.AddMonths(1).AddDays(-1);
             var monthlyPayments = await PaymentService.GetPaymentsByDateRangeAsync(monthStart, monthEnd);
-            monthlyRevenue = monthlyPayments.Sum(p => p.Amount);
+            monthlyRevenue = monthlyPayments.Sum(p => p.PaidAmount);
 
             // Load popular services
             popularServices = await ServiceTypeService.GetActiveServiceTypesAsync();

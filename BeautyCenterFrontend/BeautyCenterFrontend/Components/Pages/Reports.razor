@@ -546,13 +546,17 @@
             var prevAppointments = await AppointmentService.GetAppointmentsByDateRangeAsync(prevStartDate, prevEndDate);
 
             // Calculate KPIs
-            totalRevenue = payments.Sum(p => p.Amount);
+            totalRevenue = payments.Sum(p => p.PaidAmount);
             totalAppointments = appointments.Count;
-            newCustomers = customers.Count(c => c.Id > 0); // Placeholder for new customers
-            averageRevenue = totalAppointments > 0 ? totalRevenue / totalAppointments : 0;
+            newCustomers = customers.Count();
+            
+            // Calculate average revenue per day in the selected period
+            var totalDays = (endDate - startDate).Days;
+            if (totalDays <= 0) totalDays = 1; // Avoid division by zero
+            averageRevenue = totalDays > 0 ? totalRevenue / totalDays : 0;
 
             // Calculate changes
-            var prevRevenue = prevPayments.Sum(p => p.Amount);
+            var prevRevenue = prevPayments.Sum(p => p.PaidAmount);
             var prevAppointmentCount = prevAppointments.Count;
             var prevCustomerCount = customers.Count(c => c.Id > 0); // Placeholder for previous customers
             var prevAvgRevenue = prevAppointmentCount > 0 ? prevRevenue / prevAppointmentCount : 0;
@@ -603,7 +607,7 @@
             {
                 PaymentMethod = g.Key,
                 Count = g.Count(),
-                Amount = g.Sum(p => p.Amount)
+                Amount = g.Sum(p => p.PaidAmount)
             }).OrderByDescending(p => p.Amount).ToList();
 
         var totalAmount = methodGroups.Sum(m => m.Amount);
@@ -674,6 +678,9 @@
     {
         return method switch
         {
+            "Nakit" => "money-bill-wave",
+            "Kart" => "credit-card", 
+            "Havale" => "university",
             "Cash" => "money-bill-wave",
             "Card" => "credit-card",
             "Transfer" => "university",
@@ -685,6 +692,9 @@
     {
         return method switch
         {
+            "Nakit" => "Nakit",
+            "Kart" => "Kredi Kartı",
+            "Havale" => "Havale/EFT",
             "Cash" => "Nakit",
             "Card" => "Kredi Kartı",
             "Transfer" => "Havale",

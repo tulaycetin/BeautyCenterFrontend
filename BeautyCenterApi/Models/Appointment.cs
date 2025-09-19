@@ -9,6 +9,9 @@ namespace BeautyCenterApi.Models
         public int Id { get; set; }
 
         [Required]
+        public int TenantId { get; set; }
+
+        [Required]
         public int CustomerId { get; set; }
 
         [Required]
@@ -45,6 +48,9 @@ namespace BeautyCenterApi.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("TenantId")]
+        public virtual Tenant Tenant { get; set; } = null!;
+
         [ForeignKey("CustomerId")]
         public virtual Customer Customer { get; set; } = null!;
 

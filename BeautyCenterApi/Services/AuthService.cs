@@ -86,7 +86,7 @@ namespace BeautyCenterApi.Services
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
@@ -95,6 +95,12 @@ namespace BeautyCenterApi.Services
                 new Claim("FirstName", user.FirstName),
                 new Claim("LastName", user.LastName)
             };
+
+            // TenantId claim'i ekle (SuperAdmin hariç)
+            if (user.TenantId.HasValue)
+            {
+                claims.Add(new Claim("TenantId", user.TenantId.Value.ToString()));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: jwtIssuer,

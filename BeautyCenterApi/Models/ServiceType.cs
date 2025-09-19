@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BeautyCenterApi.Models
 {
@@ -6,6 +7,9 @@ namespace BeautyCenterApi.Models
     {
         [Key]
         public int Id { get; set; }
+
+        [Required]
+        public int TenantId { get; set; }
 
         [Required]
         [StringLength(200)]
@@ -29,6 +33,9 @@ namespace BeautyCenterApi.Models
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("TenantId")]
+        public virtual Tenant Tenant { get; set; } = null!;
+
         public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
     }
 }

@@ -2,18 +2,21 @@ using Microsoft.EntityFrameworkCore;
 using BeautyCenterApi.Data;
 using BeautyCenterApi.Interfaces;
 using BeautyCenterApi.Models;
+using BeautyCenterApi.Services;
 
 namespace BeautyCenterApi.Repositories
 {
     public class AppointmentRepository : GenericRepository<Appointment>, IAppointmentRepository
     {
-        public AppointmentRepository(BeautyCenterDbContext context) : base(context)
+        public AppointmentRepository(BeautyCenterDbContext context, ITenantService tenantService)
+            : base(context, tenantService)
         {
         }
 
         public new async Task<IEnumerable<Appointment>> GetAllAsync()
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -23,7 +26,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<IEnumerable<Appointment>> GetByCustomerIdAsync(int customerId)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
                 .Where(a => a.CustomerId == customerId)
@@ -33,7 +37,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<IEnumerable<Appointment>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -44,7 +49,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<IEnumerable<Appointment>> GetByStatusAsync(string status)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -55,7 +61,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<IEnumerable<Appointment>> GetByServiceTypeIdAsync(int serviceTypeId)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -68,8 +75,9 @@ namespace BeautyCenterApi.Repositories
         {
             var today = DateTime.Today;
             var tomorrow = today.AddDays(1);
-            
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -80,7 +88,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<Appointment?> GetWithDetailsAsync(int appointmentId)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.Customer)
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
@@ -91,7 +100,8 @@ namespace BeautyCenterApi.Repositories
         public async Task<IEnumerable<Appointment>> GetUpcomingAppointmentsAsync(int customerId)
         {
             var now = DateTime.Now;
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Include(a => a.ServiceType)
                 .Include(a => a.User)
                 .Where(a => a.CustomerId == customerId && a.AppointmentDate > now && a.Status == "Scheduled")
@@ -101,7 +111,8 @@ namespace BeautyCenterApi.Repositories
 
         public async Task<decimal> GetTotalRevenueAsync(DateTime startDate, DateTime endDate)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Where(a => a.AppointmentDate >= startDate && a.AppointmentDate <= endDate && a.Status == "Completed")
                 .SumAsync(a => a.FinalPrice);
         }

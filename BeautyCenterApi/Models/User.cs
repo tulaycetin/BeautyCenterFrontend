@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BeautyCenterApi.Models
 {
@@ -6,6 +7,9 @@ namespace BeautyCenterApi.Models
     {
         [Key]
         public int Id { get; set; }
+
+        // Tenant ilişkisi - SuperAdmin için null olabilir
+        public int? TenantId { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -29,7 +33,7 @@ namespace BeautyCenterApi.Models
 
         [Required]
         [StringLength(50)]
-        public string Role { get; set; } = "Employee"; // Admin, Employee
+        public string Role { get; set; } = "Employee"; // SuperAdmin, TenantAdmin, Employee
 
         [StringLength(15)]
         public string? Phone { get; set; }
@@ -39,5 +43,17 @@ namespace BeautyCenterApi.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+
+        // Navigation property
+        [ForeignKey("TenantId")]
+        public virtual Tenant? Tenant { get; set; }
+    }
+
+    // Kullanıcı rolleri için enum
+    public enum UserRole
+    {
+        SuperAdmin,     // Sistem geneli yönetici
+        TenantAdmin,    // Tenant yöneticisi
+        Employee        // Çalışan
     }
 }

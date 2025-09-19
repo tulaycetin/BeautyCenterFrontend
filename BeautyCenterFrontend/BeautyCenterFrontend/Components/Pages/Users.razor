@@ -1,0 +1,449 @@
+@page "/users"
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@inject ApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject AuthService AuthService
+
+<PageTitle>Kullanıcı Yönetimi</PageTitle>
+
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="fas fa-users-cog me-2"></i>Kullanıcı Yönetimi
+    </h1>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Kullanıcı ara..." @bind="searchTerm" @oninput="@((e) => SearchUsers(e.Value?.ToString()))" />
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <button class="btn btn-success" @onclick="ShowAddUserModal">
+                    <i class="fas fa-plus me-2"></i>Yeni Kullanıcı
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Kullanıcı Adı</th>
+                        <th>Ad Soyad</th>
+                        <th>E-posta</th>
+                        <th>Rol</th>
+                        <th>Tenant</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in filteredUsers)
+                    {
+                        <tr>
+                            <td>@user.Username</td>
+                            <td>@user.FirstName @user.LastName</td>
+                            <td>@user.Email</td>
+                            <td>
+                                <span class="badge @GetRoleBadgeClass(user.Role)">@user.Role</span>
+                            </td>
+                            <td>@(user.TenantName ?? "-")</td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge bg-success">Aktif</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Pasif</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info me-1" @onclick="() => ViewUserDetails(user)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-warning me-1" @onclick="() => EditUser(user)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user.Id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* Add User Modal *@
+@if (showAddModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Kullanıcı Ekle</h5>
+                    <button type="button" class="btn-close" @onclick="() => showAddModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Kullanıcı Adı</label>
+                            <input type="text" class="form-control" @bind="newUser.Username" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">E-posta</label>
+                            <input type="email" class="form-control" @bind="newUser.Email" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ad</label>
+                            <input type="text" class="form-control" @bind="newUser.FirstName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Soyad</label>
+                            <input type="text" class="form-control" @bind="newUser.LastName" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Şifre</label>
+                            <input type="password" class="form-control" @bind="newUser.Password" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefon</label>
+                            <input type="text" class="form-control" @bind="newUser.Phone" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Rol</label>
+                            <select class="form-select" @bind="newUser.Role">
+                                <option value="">Seçiniz</option>
+                                <option value="TenantAdmin">Tenant Admin</option>
+                                <option value="Employee">Çalışan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tenant</label>
+                            <select class="form-select" @bind="newUser.TenantId">
+                                <option value="">Seçiniz</option>
+                                @foreach (var tenant in tenants)
+                                {
+                                    <option value="@tenant.Id">@tenant.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showAddModal = false">İptal</button>
+                    <button type="button" class="btn btn-primary" @onclick="AddUser">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Edit User Modal *@
+@if (showEditModal && selectedUser != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kullanıcı Düzenle</h5>
+                    <button type="button" class="btn-close" @onclick="() => showEditModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Kullanıcı Adı</label>
+                            <input type="text" class="form-control" @bind="selectedUser.Username" readonly />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">E-posta</label>
+                            <input type="email" class="form-control" @bind="selectedUser.Email" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Ad</label>
+                            <input type="text" class="form-control" @bind="selectedUser.FirstName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Soyad</label>
+                            <input type="text" class="form-control" @bind="selectedUser.LastName" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefon</label>
+                            <input type="text" class="form-control" @bind="selectedUser.Phone" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Durum</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="selectedUser.IsActive" />
+                                <label class="form-check-label">
+                                    @(selectedUser.IsActive ? "Aktif" : "Pasif")
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showEditModal = false">İptal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveUserChanges">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* View Details Modal *@
+@if (showDetailsModal && selectedUser != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kullanıcı Detayları</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDetailsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Kullanıcı Adı:</strong> @selectedUser.Username</p>
+                    <p><strong>Ad Soyad:</strong> @selectedUser.FirstName @selectedUser.LastName</p>
+                    <p><strong>E-posta:</strong> @selectedUser.Email</p>
+                    <p><strong>Telefon:</strong> @selectedUser.Phone</p>
+                    <p><strong>Rol:</strong> @selectedUser.Role</p>
+                    <p><strong>Tenant:</strong> @(selectedUser.TenantName ?? "-")</p>
+                    <p><strong>Durum:</strong> @(selectedUser.IsActive ? "Aktif" : "Pasif")</p>
+                    <p><strong>Oluşturulma:</strong> @selectedUser.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDetailsModal = false">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteModal)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Kullanıcı Sil</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bu kullanıcıyı silmek istediğinizden emin misiniz?</p>
+                    <p class="text-danger">Bu işlem geri alınamaz!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">İptal</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private List<UserDto> users = new();
+    private List<UserDto> filteredUsers = new();
+    private List<TenantDto> tenants = new();
+    private string searchTerm = "";
+
+    private bool showAddModal = false;
+    private bool showEditModal = false;
+    private bool showDetailsModal = false;
+    private bool showDeleteModal = false;
+
+    private UserDto? selectedUser;
+    private int deleteUserId;
+    private CreateUserDto newUser = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuth();
+        await LoadData();
+    }
+
+    private async Task CheckAuth()
+    {
+        var userInfo = await AuthService.GetCurrentUserAsync();
+        if (userInfo == null || userInfo.Role != "SuperAdmin")
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Load users and tenants
+            users = await ApiService.GetAsync<List<UserDto>>("api/superadmin/users") ?? new();
+            tenants = await ApiService.GetAsync<List<TenantDto>>("api/superadmin/tenants") ?? new();
+
+            // Map tenant names to users
+            foreach (var user in users)
+            {
+                if (user.TenantId.HasValue)
+                {
+                    var tenant = tenants.FirstOrDefault(t => t.Id == user.TenantId.Value);
+                    user.TenantName = tenant?.Name;
+                }
+            }
+
+            filteredUsers = users;
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Veriler yüklenirken hata oluştu.", "error");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SearchUsers(string? value)
+    {
+        searchTerm = value ?? "";
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredUsers = users;
+        }
+        else
+        {
+            filteredUsers = users.Where(u =>
+                u.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.FirstName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.LastName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+        StateHasChanged();
+    }
+
+    private void ShowAddUserModal()
+    {
+        newUser = new CreateUserDto();
+        showAddModal = true;
+        StateHasChanged();
+    }
+
+    private async Task AddUser()
+    {
+        try
+        {
+            var response = await ApiService.PostAsync<bool>("api/superadmin/users", newUser);
+            if (response)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı", "Kullanıcı eklendi.", "success");
+                await LoadData();
+                showAddModal = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Kullanıcı eklenirken hata oluştu.", "error");
+        }
+    }
+
+    private void ViewUserDetails(UserDto user)
+    {
+        selectedUser = user;
+        showDetailsModal = true;
+        StateHasChanged();
+    }
+
+    private void EditUser(UserDto user)
+    {
+        selectedUser = user;
+        showEditModal = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveUserChanges()
+    {
+        if (selectedUser != null)
+        {
+            try
+            {
+                var response = await ApiService.PutAsync($"api/superadmin/users/{selectedUser.Id}", selectedUser);
+                if (response)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı", "Kullanıcı güncellendi.", "success");
+                    await LoadData();
+                    showEditModal = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Güncelleme sırasında hata oluştu.", "error");
+            }
+        }
+    }
+
+    private void DeleteUser(int id)
+    {
+        deleteUserId = id;
+        showDeleteModal = true;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            var response = await ApiService.DeleteAsync($"api/superadmin/users/{deleteUserId}");
+            if (response)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı", "Kullanıcı silindi.", "success");
+                await LoadData();
+                showDeleteModal = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Silme işlemi sırasında hata oluştu.", "error");
+        }
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "SuperAdmin" => "bg-danger",
+            "TenantAdmin" => "bg-primary",
+            "Employee" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+}

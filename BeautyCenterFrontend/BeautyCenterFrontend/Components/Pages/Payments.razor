@@ -17,106 +17,102 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="page-title">
-                <i class="fas fa-credit-card me-2"></i>
+                <i class="fas fa-money-bill-wave me-2"></i>
                 Ödeme Yönetimi
             </h1>
             <p class="text-muted">Ödemeleri görüntüle ve yönet</p>
         </div>
-        <button class="btn btn-primary" @onclick="OpenAddPaymentModal">
-            <i class="fas fa-plus me-2"></i>
-            Yeni Ödeme
-        </button>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="stat-card bg-success text-white">
-                <div class="stat-icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>₺@totalRevenue.ToString("N0")</h3>
-                    <p>Toplam Gelir</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="stat-card bg-primary text-white">
-                <div class="stat-icon">
-                    <i class="fas fa-calendar-day"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>₺@todayRevenue.ToString("N0")</h3>
-                    <p>Bugünkü Gelir</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="stat-card bg-warning text-white">
-                <div class="stat-icon">
-                    <i class="fas fa-calendar-week"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>₺@weeklyRevenue.ToString("N0")</h3>
-                    <p>Haftalık Gelir</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="stat-card bg-info text-white">
-                <div class="stat-icon">
-                    <i class="fas fa-receipt"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>@totalPayments</h3>
-                    <p>Toplam Ödeme</p>
-                </div>
-            </div>
+        <div class="btn-group">
+            <button class="btn btn-primary btn-lg" @onclick="OpenAddPaymentModal">
+                <i class="fas fa-plus me-2"></i>
+                Yeni Ödeme Ekle
+            </button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="RefreshData" title="Verileri Yenile">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
     </div>
 
+    <!-- Summary Cards -->
+    @if (paymentSummary != null)
+    {
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-primary text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>₺@paymentSummary.TotalRevenue.ToString("N0")</h3>
+                        <p>Toplam Gelir</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-success text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>₺@paymentSummary.TotalPaid.ToString("N0")</h3>
+                        <p>Tahsil Edilen</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-warning text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>₺@paymentSummary.TotalRemaining.ToString("N0")</h3>
+                        <p>Kalan Borç</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-info text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>@paymentSummary.TotalPayments</h3>
+                        <p>Toplam İşlem</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "payments" ? "active" : "")" @onclick="@(() => SetActiveTab("payments"))">
+                <i class="fas fa-list me-2"></i>Son Ödemeler
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "installments" ? "active" : "")" @onclick="@(() => SetActiveTab("installments"))">
+                <i class="fas fa-calendar-alt me-2"></i>Yaklaşan Taksitler
+                @if (paymentSummary?.UpcomingInstallments?.Count > 0)
+                {
+                    <span class="badge bg-danger ms-2">@paymentSummary.UpcomingInstallments.Count</span>
+                }
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "overdue" ? "active" : "")" @onclick="@(() => SetActiveTab("overdue"))">
+                <i class="fas fa-exclamation-triangle me-2"></i>Geciken Ödemeler
+                @if (overdueInstallments?.Count > 0)
+                {
+                    <span class="badge bg-danger ms-2">@overdueInstallments.Count</span>
+                }
+            </button>
+        </li>
+    </ul>
+
+    <!-- Content based on active tab -->
     <div class="card">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" class="form-control" placeholder="Ödeme ara..." 
-                               value="@searchTerm" @oninput="OnSearchChanged">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <select class="form-select" value="@selectedPaymentMethod" @onchange="OnPaymentMethodChanged">
-                        <option value="">Tüm Ödeme Yöntemleri</option>
-                        <option value="Cash">Nakit</option>
-                        <option value="Card">Kredi Kartı</option>
-                        <option value="Transfer">Havale</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <div class="btn-group w-100" role="group">
-                        <button type="button" class="btn @(dateFilter == "today" ? "btn-primary" : "btn-outline-primary")" 
-                                @onclick="@(() => SetDateFilter("today"))">
-                            <i class="fas fa-calendar-day me-1"></i>
-                            Bugün
-                        </button>
-                        <button type="button" class="btn @(dateFilter == "week" ? "btn-primary" : "btn-outline-primary")" 
-                                @onclick="@(() => SetDateFilter("week"))">
-                            <i class="fas fa-calendar-week me-1"></i>
-                            Bu Hafta
-                        </button>
-                        <button type="button" class="btn @(dateFilter == "month" ? "btn-primary" : "btn-outline-primary")" 
-                                @onclick="@(() => SetDateFilter("month"))">
-                            <i class="fas fa-calendar-alt me-1"></i>
-                            Bu Ay
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="card-body">
             @if (isLoading)
             {
@@ -124,414 +120,766 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Yükleniyor...</span>
                     </div>
+                    <p class="mt-3">Veriler yükleniyor...</p>
                 </div>
             }
-            else if (filteredPayments.Any())
+            else if (activeTab == "payments")
             {
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Tarih</th>
-                                <th>Müşteri</th>
-                                <th>Hizmet</th>
-                                <th>Tutar</th>
-                                <th>Ödeme Yöntemi</th>
-                                <th>İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var payment in filteredPayments)
-                            {
+                @if (paymentSummary?.RecentPayments?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div class="payment-date">
-                                            <div class="fw-bold">@payment.PaymentDate.ToString("dd.MM.yyyy")</div>
-                                            <small class="text-muted">@payment.PaymentDate.ToString("HH:mm")</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-circle me-3">
-                                                @if (!string.IsNullOrEmpty(payment.CustomerName))
-                                                {
-                                                    var names = payment.CustomerName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                                                    @if (names.Length > 1 && names[0].Length > 0 && names[1].Length > 0)
-                                                    {
-                                                        @names[0][0]@names[1][0]
-                                                    }
-                                                    else if (names.Length > 0 && names[0].Length > 0)
-                                                    {
-                                                        @names[0][0]
-                                                    }
-                                                }
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">@payment.CustomerName</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="service-info">
-                                            <div class="fw-bold">@(payment.ServiceTypeName ?? "Genel Ödeme")</div>
-                                            @if (!string.IsNullOrEmpty(payment.Notes))
-                                            {
-                                                <small class="text-muted">@payment.Notes</small>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="amount-info">
-                                            <div class="fw-bold text-success">₺@payment.Amount.ToString("N2")</div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-@(GetPaymentMethodColor(payment.PaymentMethod))">
-                                            @GetPaymentMethodText(payment.PaymentMethod)
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                    @onclick="() => ViewPaymentDetails(payment.Id)">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-info" 
-                                                    @onclick="() => PrintReceipt(payment.Id)">
-                                                <i class="fas fa-print"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-warning" 
-                                                    @onclick="() => EditPayment(payment)">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        </div>
-                                    </td>
+                                    <th>Tarih</th>
+                                    <th>Müşteri</th>
+                                    <th>Hizmet</th>
+                                    <th>Toplam</th>
+                                    <th>Ödenen</th>
+                                    <th>Kalan</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in paymentSummary.RecentPayments)
+                                {
+                                    <tr>
+                                        <td>@payment.PaymentDate.ToString("dd.MM.yyyy")</td>
+                                        <td>
+                                            <strong>@payment.CustomerName</strong><br>
+                                            <small class="text-muted">@payment.CustomerPhone</small>
+                                        </td>
+                                        <td>@(payment.ServiceTypeName ?? "Genel Ödeme")</td>
+                                        <td class="fw-bold">@payment.TotalAmountText</td>
+                                        <td class="text-success">@payment.PaidAmountText</td>
+                                        <td class="@(payment.RemainingAmount > 0 ? "text-danger" : "text-muted")">
+                                            @payment.RemainingAmountText
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-@payment.StatusColor">
+                                                @payment.PaymentStatusText
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                @if (payment.RemainingAmount > 0)
+                                                {
+                                                    <button class="btn btn-success" @onclick="() => ShowAddPaymentToExisting(payment)" title="Ödeme Ekle">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                }
+                                                <button class="btn btn-info" @onclick="() => ViewPaymentDetails(payment)" title="Detaylar">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Henüz ödeme kaydı bulunmamaktadır</h5>
+                        <p class="text-muted">Yeni ödeme eklemek için yukarıdaki butonu kullanabilirsiniz.</p>
+                    </div>
+                }
             }
-            else
+            else if (activeTab == "installments")
             {
-                <div class="text-center py-5">
-                    <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Ödeme bulunamadı</h5>
-                    <p class="text-muted">Arama kriterlerinizi değiştirin veya yeni ödeme ekleyin.</p>
-                </div>
+                @if (paymentSummary?.UpcomingInstallments?.Any() == true)
+                {
+                    <h5 class="mb-3">Yaklaşan Taksitler</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vade Tarihi</th>
+                                    <th>Tutar</th>
+                                    <th>Not</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var installment in paymentSummary.UpcomingInstallments)
+                                {
+                                    <tr class="@(installment.IsOverdue ? "table-danger" : "")">
+                                        <td>
+                                            @installment.DueDateText
+                                            @if (installment.IsOverdue)
+                                            {
+                                                <br><small class="text-danger fw-bold">@installment.OverdueDays gün gecikmiş!</small>
+                                            }
+                                        </td>
+                                        <td class="fw-bold">@installment.AmountText</td>
+                                        <td>@(installment.Notes ?? "-")</td>
+                                        <td>
+                                            <span class="badge bg-@installment.StatusColor">
+                                                @installment.StatusText
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (!installment.IsPaid)
+                                            {
+                                                <button class="btn btn-sm btn-success" @onclick="() => PayInstallment(installment)">
+                                                    <i class="fas fa-check me-1"></i>Tahsil Et
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Yaklaşan taksit bulunmamaktadır.
+                    </div>
+                }
+            }
+            else if (activeTab == "overdue")
+            {
+                @if (overdueInstallments?.Any() == true)
+                {
+                    <h5 class="mb-3 text-danger">Geciken Ödemeler</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vade Tarihi</th>
+                                    <th>Müşteri</th>
+                                    <th>Telefon</th>
+                                    <th>Tutar</th>
+                                    <th>Gecikme</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (dynamic overdue in overdueInstallments)
+                                {
+                                    <tr class="table-danger">
+                                        <td>@DateTime.Parse(overdue.dueDate.ToString()).ToString("dd.MM.yyyy")</td>
+                                        <td><strong>@overdue.customerName</strong></td>
+                                        <td>@overdue.customerPhone</td>
+                                        <td class="fw-bold">₺@decimal.Parse(overdue.amount.ToString()).ToString("N2")</td>
+                                        <td>
+                                            <span class="badge bg-danger">@overdue.daysOverdue gün</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-success" @onclick="() => CollectOverduePayment(overdue)">
+                                                <i class="fas fa-check me-1"></i>Tahsil Et
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Geciken ödeme bulunmamaktadır.
+                    </div>
+                }
             }
         </div>
     </div>
 </div>
 
-@* Payment Add/Edit Modal *@
-<Modal IsVisible="@showPaymentModal" 
-       Title="@(isEditMode ? "Ödeme Düzenle" : "Yeni Ödeme Ekle")"
-       Icon="credit-card"
-       Size="lg"
-       OnClose="@ClosePaymentModal">
-    <ChildContent>
-        <EditForm Model="@paymentModel" OnValidSubmit="@SavePayment" FormName="PaymentModalForm" id="PaymentModalForm">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-            
-            <div class="row g-3">
-                <div class="col-12 col-md-6 mb-3">
-                    <label for="modalCustomerId" class="form-label">Müşteri *</label>
-                    <select id="modalCustomerId" class="form-select" @onchange="OnCustomerChanged">
-                        <option value="0">Müşteri seçiniz...</option>
-                        @foreach (var customer in customers)
+<!-- Add Payment Modal -->
+@if (showAddPaymentModal)
+{
+    <div class="payment-modal-overlay" @onclick="CloseAddPaymentModal">
+        <div class="payment-modal-container" @onclick:stopPropagation="true">
+            <div class="payment-modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>Yeni Ödeme Ekle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddPaymentModal"></button>
+                </div>
+                <div class="modal-body" style="pointer-events: auto;">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMessage
+                        </div>
+                    }
+                    
+                    @if (loadingAppointments)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Yükleniyor...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (!pendingAppointments.Any())
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Ödemesi bekleyen randevu bulunmamaktadır.
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Step 1: Select Customer -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">1. Müşteri Seçin:</label>
+                            <select class="form-select form-select-lg" @onchange="OnCustomerSelected">
+                                <option value="">-- Müşteri Seçin --</option>
+                                @foreach (var customer in customersWithAppointments)
+                                {
+                                    <option value="@customer.CustomerId">
+                                        @customer.CustomerName - @customer.CustomerPhone
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Step 2: Select Appointment (only shows if customer selected) -->
+                        @if (selectedCustomerId > 0 && customerAppointments.Any())
                         {
-                            <option value="@customer.Id" selected="@(paymentModel.CustomerId == customer.Id)">@customer.FirstName @customer.LastName</option>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">2. Randevu Seçin:</label>
+                                <select class="form-select form-select-lg" @onchange="OnAppointmentSelected">
+                                    <option value="">-- Randevu Seçin --</option>
+                                    @foreach (var apt in customerAppointments)
+                                    {
+                                        <option value="@apt.Id">
+                                            @apt.ServiceName - @apt.AppointmentDateText - Kalan: @apt.RemainingAmountText
+                                        </option>
+                                    }
+                                </select>
+                            </div>
                         }
-                    </select>
-                    <ValidationMessage For="@(() => paymentModel.CustomerId)" />
-                </div>
-                
-                <div class="col-12 col-md-6 mb-3">
-                    <label for="modalAppointmentId" class="form-label">Randevu (Opsiyonel)</label>
-                    <select id="modalAppointmentId" class="form-select" @bind="paymentModel.AppointmentId">
-                        <option value="">Randevu seçiniz...</option>
-                        @foreach (var appointment in filteredAppointments)
-                        {
-                            <option value="@appointment.Id">@appointment.ServiceTypeName - @appointment.AppointmentDate.ToString("dd.MM.yyyy HH:mm")</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            
-            <div class="row g-3">
-                <div class="col-12 col-md-4 mb-3">
-                    <label for="modalAmount" class="form-label">Tutar (₺) *</label>
-                    <InputNumber id="modalAmount" class="form-control" @bind-Value="paymentModel.Amount" min="0.01" step="0.01" />
-                    <ValidationMessage For="@(() => paymentModel.Amount)" />
-                </div>
-                
-                <div class="col-12 col-md-4 mb-3">
-                    <label for="modalPaymentMethod" class="form-label">Ödeme Yöntemi *</label>
-                    <InputSelect id="modalPaymentMethod" class="form-select" @bind-Value="paymentModel.PaymentMethod">
-                        <option value="Cash">Nakit</option>
-                        <option value="Card">Kredi Kartı</option>
-                        <option value="Transfer">Havale</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => paymentModel.PaymentMethod)" />
-                </div>
-                
-                <div class="col-12 col-md-4 mb-3">
-                    <label for="modalPaymentType" class="form-label">Ödeme Türü *</label>
-                    <InputSelect id="modalPaymentType" class="form-select" @bind-Value="paymentModel.PaymentType">
-                        <option value="Full">Tam Ödeme</option>
-                        <option value="Partial">Kısmi Ödeme</option>
-                        <option value="Advance">Avans</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => paymentModel.PaymentType)" />
-                </div>
-            </div>
-            
-            <div class="row g-3">
-                <div class="col-12 col-md-6 mb-3">
-                    <label for="modalPaymentDate" class="form-label">Ödeme Tarihi *</label>
-                    <InputDate id="modalPaymentDate" class="form-control" @bind-Value="paymentModel.PaymentDate" />
-                    <ValidationMessage For="@(() => paymentModel.PaymentDate)" />
-                </div>
-                
-                <div class="col-12 col-md-6 mb-3">
-                    <label for="modalReferenceNumber" class="form-label">Referans Numarası</label>
-                    <InputText id="modalReferenceNumber" class="form-control" @bind-Value="paymentModel.ReferenceNumber" placeholder="Referans numarası (opsiyonel)" />
-                    <ValidationMessage For="@(() => paymentModel.ReferenceNumber)" />
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                <label for="modalDescription" class="form-label">Açıklama</label>
-                <InputTextArea id="modalDescription" class="form-control" rows="3" @bind-Value="paymentModel.Description" placeholder="Ödeme açıklaması" />
-                <ValidationMessage For="@(() => paymentModel.Description)" />
-            </div>
-        </EditForm>
-    </ChildContent>
-    <FooterContent>
-        <button type="button" class="btn btn-secondary" @onclick="ClosePaymentModal">
-            <i class="fas fa-times me-1"></i>
-            İptal
-        </button>
-        <button type="submit" form="PaymentModalForm" class="btn btn-success" disabled="@isSaving">
-            @if (isSaving)
-            {
-                <span class="spinner-border spinner-border-sm me-2"></span>
-            }
-            <i class="fas fa-save me-1"></i>
-            @(isEditMode ? "Güncelle" : "Kaydet")
-        </button>
-    </FooterContent>
-</Modal>
 
-@* Payment Detail Modal *@
-<Modal IsVisible="@showPaymentDetailModal" 
-       Title="Ödeme Detayları"
-       Icon="eye"
-       Size="lg"
-       OnClose="@ClosePaymentDetailModal">
-    <ChildContent>
-        @if (selectedPayment != null)
-        {
-            <div class="row g-3">
-                <div class="col-12 mb-3">
-                    <div class="payment-detail-card">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="detail-group">
-                                    <label class="detail-label">Müşteri</label>
-                                    <div class="detail-value">
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-circle me-3">
-                                                @if (!string.IsNullOrEmpty(selectedPayment.CustomerName))
-                                                {
-                                                    var names = selectedPayment.CustomerName.Split(' ');
-                                                    @if (names.Length > 1)
-                                                    {
-                                                        @names[0][0]@names[1][0]
-                                                    }
-                                                    else
-                                                    {
-                                                        @names[0][0]
-                                                    }
-                                                }
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">@selectedPayment.CustomerName</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-group">
-                                    <label class="detail-label">Ödeme Tarihi</label>
-                                    <div class="detail-value">
-                                        <i class="fas fa-calendar me-2 text-primary"></i>
-                                        @selectedPayment.PaymentDate.ToString("dd.MM.yyyy HH:mm")
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <div class="payment-detail-card">
-                        <div class="detail-group">
-                            <label class="detail-label">Ödeme Tutarı</label>
-                            <div class="detail-value">
-                                <h4 class="text-success mb-0">
-                                    <i class="fas fa-money-bill-wave me-2"></i>
-                                    ₺@selectedPayment.Amount.ToString("N2")
-                                </h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <div class="payment-detail-card">
-                        <div class="detail-group">
-                            <label class="detail-label">Ödeme Yöntemi</label>
-                            <div class="detail-value">
-                                <span class="badge bg-@(GetPaymentMethodColor(selectedPayment.PaymentMethod)) fs-6">
-                                    @GetPaymentMethodText(selectedPayment.PaymentMethod)
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <div class="payment-detail-card">
-                        <div class="detail-group">
-                            <label class="detail-label">Ödeme Türü</label>
-                            <div class="detail-value">@selectedPayment.PaymentTypeText</div>
-                        </div>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrEmpty(selectedPayment.ReferenceNumber))
-                {
-                    <div class="col-md-6 mb-3">
-                        <div class="payment-detail-card">
-                            <div class="detail-group">
-                                <label class="detail-label">Referans Numarası</label>
-                                <div class="detail-value">@selectedPayment.ReferenceNumber</div>
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                @* Service Information *@
-                <div class="col-12 mb-3">
-                    <div class="service-detail-section">
-                        <h5 class="section-title">
-                            <i class="fas fa-spa me-2"></i>
-                            Hizmet Bilgileri
-                        </h5>
-                        
                         @if (selectedAppointment != null)
                         {
-                            <div class="service-detail-card">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="detail-group">
-                                            <label class="detail-label">Hizmet Adı</label>
-                                            <div class="detail-value fw-bold">@selectedAppointment.ServiceTypeName</div>
+                            <!-- Appointment Details Card -->
+                            <div class="card border-info mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Randevu Detayları</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-2"><strong>Müşteri:</strong> @selectedAppointment.CustomerName</p>
+                                            <p class="mb-2"><strong>Telefon:</strong> @selectedAppointment.CustomerPhone</p>
+                                            <p class="mb-2"><strong>Hizmet:</strong> @selectedAppointment.ServiceName</p>
+                                            <p class="mb-0"><strong>Randevu:</strong> @selectedAppointment.AppointmentDateText</p>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="detail-group">
-                                            <label class="detail-label">Randevu Tarihi</label>
-                                            <div class="detail-value">
-                                                <i class="fas fa-clock me-2 text-info"></i>
-                                                @selectedAppointment.AppointmentDate.ToString("dd.MM.yyyy HH:mm")
+                                        <div class="col-md-6">
+                                            <div class="alert alert-warning mb-2">
+                                                <strong>Hizmet Bedeli:</strong> @selectedAppointment.FinalPriceText
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="detail-group">
-                                            <label class="detail-label">Seans Bilgisi</label>
-                                            <div class="detail-value">
-                                                <span class="badge bg-info">
-                                                    @selectedAppointment.SessionsCompleted / @selectedAppointment.SessionsTotal
-                                                </span>
+                                            <div class="alert alert-success mb-2">
+                                                <strong>Daha Önce Ödenen:</strong> @selectedAppointment.PaidAmountText
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="detail-group">
-                                            <label class="detail-label">Durum</label>
-                                            <div class="detail-value">
-                                                <span class="badge bg-@(GetAppointmentStatusColor(selectedAppointment.Status))">
-                                                    @GetAppointmentStatusText(selectedAppointment.Status)
-                                                </span>
+                                            <div class="alert alert-danger mb-0">
+                                                <strong>Kalan Borç:</strong> @selectedAppointment.RemainingAmountText
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Step 3: Payment Form -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">3. Ödeme Bilgileri:</label>
                                 
-                                @if (!string.IsNullOrEmpty(selectedAppointment.Notes))
+                                <!-- Payment Summary -->
+                                <div class="card border-success mb-3">
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <div class="border-end">
+                                                    <h6 class="text-muted mb-1">Toplam Tutar</h6>
+                                                    <h4 class="text-primary mb-0">@selectedAppointment.FinalPriceText</h4>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="border-end">
+                                                    <h6 class="text-muted mb-1">Daha Önce Ödenen</h6>
+                                                    <h4 class="text-success mb-0">@selectedAppointment.PaidAmountText</h4>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <h6 class="text-muted mb-1">Kalan Borç</h6>
+                                                <h4 class="text-danger mb-0">@selectedAppointment.RemainingAmountText</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Şimdi Alınan Ödeme <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₺</span>
+                                            <input type="number" class="form-control form-control-lg" 
+                                                   @bind="newPayment.InitialPayment" @bind:event="oninput"
+                                                   step="0.01" min="0" max="@selectedAppointment.RemainingAmount"
+                                                   placeholder="Alınan ödeme tutarını girin">
+                                        </div>
+                                        <small class="text-muted">Maksimum: @selectedAppointment.RemainingAmountText</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Ödeme Yöntemi <span class="text-danger">*</span></label>
+                                        <select class="form-select form-select-lg" @bind="newPayment.PaymentMethod">
+                                            <option value="Nakit">Nakit</option>
+                                            <option value="Kart">Kredi Kartı</option>
+                                            <option value="Havale">Havale/EFT</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                @if (newPayment.InitialPayment > 0 && newPayment.InitialPayment < selectedAppointment.RemainingAmount)
                                 {
-                                    <div class="mt-3">
-                                        <label class="detail-label">Randevu Notları</label>
-                                        <div class="detail-value">
-                                            <div class="alert alert-light">
-                                                @selectedAppointment.Notes
+                                    <div class="alert alert-info mt-3">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <strong>Alınan Ödeme:</strong><br>
+                                                <span class="text-success fs-5">₺@newPayment.InitialPayment.ToString("N2")</span>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Ödeme Yöntemi:</strong><br>
+                                                <span class="fs-5">@newPayment.PaymentMethod</span>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Yeni Kalan Borç:</strong><br>
+                                                <span class="text-danger fs-5">₺@((selectedAppointment.RemainingAmount - newPayment.InitialPayment).ToString("N2"))</span>
                                             </div>
                                         </div>
                                     </div>
                                 }
+                                else if (newPayment.InitialPayment >= selectedAppointment.RemainingAmount && newPayment.InitialPayment > 0)
+                                {
+                                    <div class="alert alert-success mt-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong>TAM ÖDEME!</strong> Borç tamamen kapatılacak.
+                                        </div>
+                                    </div>
+                                }
                             </div>
-                        }
-                        else
-                        {
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Bu ödeme belirli bir randevuya bağlı değil. Genel ödeme olarak kaydedilmiş.
-                            </div>
-                        }
-                    </div>
-                </div>
 
-                @if (!string.IsNullOrEmpty(selectedPayment.Description))
-                {
-                    <div class="col-12 mb-3">
-                        <div class="payment-detail-card">
-                            <div class="detail-group">
-                                <label class="detail-label">Açıklama</label>
-                                <div class="detail-value">
-                                    <div class="alert alert-light">
-                                        @selectedPayment.Description
+                            <!-- Step 4: Installment Options (only if partial payment) -->
+                            @if (newPayment.InitialPayment > 0 && newPayment.InitialPayment < selectedAppointment.RemainingAmount)
+                            {
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">4. Kalan Borç için Taksit Seçeneği (Opsiyonel):</label>
+                                    <select class="form-select" @bind="installmentOption">
+                                        <option value="none">Taksit Yok - Açık hesap kalsın</option>
+                                        <option value="2">2 Taksit</option>
+                                        <option value="3">3 Taksit</option>
+                                        <option value="4">4 Taksit</option>
+                                        <option value="6">6 Taksit</option>
+                                        <option value="12">12 Taksit</option>
+                                    </select>
+
+                                    @if (installmentOption != "none")
+                                    {
+                                        var remainingAfterInitial = selectedAppointment.RemainingAmount - newPayment.InitialPayment;
+                                        var installmentCount = int.Parse(installmentOption);
+                                        var installmentAmount = remainingAfterInitial / installmentCount;
+                                        
+                                        <div class="card border-warning mt-3">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Taksit Planı (₺@remainingAfterInitial.ToString("N2") için)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Taksit</th>
+                                                                <th>Tutar</th>
+                                                                <th>Vade Tarihi</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @for (int i = 1; i <= installmentCount; i++)
+                                                            {
+                                                                <tr>
+                                                                    <td>@i. Taksit</td>
+                                                                    <td class="fw-bold text-warning">₺@installmentAmount.ToString("N2")</td>
+                                                                    <td>@DateTime.Today.AddMonths(i).ToString("dd.MM.yyyy")</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <!-- Description -->
+                            <div class="mb-3">
+                                <label class="form-label">Açıklama (Opsiyonel):</label>
+                                <textarea class="form-control" @bind="newPayment.Description" rows="2" 
+                                          placeholder="Ödeme ile ilgili notlar..."></textarea>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddPaymentModal">
+                        <i class="fas fa-times me-2"></i>İptal
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="SavePayment" 
+                            disabled="@(selectedAppointment == null || isProcessing || newPayment.InitialPayment <= 0)">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="fas fa-save me-2"></i>Ödemeyi Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Add Payment to Existing Modal -->
+@if (showAddToExistingModal && selectedExistingPayment != null)
+{
+    <div class="payment-modal-overlay" @onclick="CloseAddToExistingModal">
+        <div class="payment-modal-container" @onclick:stopPropagation="true" style="max-width: 600px;">
+            <div class="payment-modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>Mevcut Ödemeye Ekleme
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddToExistingModal"></button>
+                </div>
+                <div class="modal-body" style="pointer-events: auto;">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMessage
+                        </div>
+                    }
+                    
+                    <!-- Payment Info -->
+                    <div class="card border-info mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Mevcut Ödeme Bilgisi</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Müşteri:</strong> @selectedExistingPayment.CustomerName</p>
+                                    <p class="mb-2"><strong>Telefon:</strong> @selectedExistingPayment.CustomerPhone</p>
+                                    <p class="mb-0"><strong>Hizmet:</strong> @selectedExistingPayment.ServiceTypeName</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="alert alert-warning mb-2">
+                                        <strong>Toplam Tutar:</strong> @selectedExistingPayment.TotalAmountText
+                                    </div>
+                                    <div class="alert alert-success mb-2">
+                                        <strong>Ödenen:</strong> @selectedExistingPayment.PaidAmountText
+                                    </div>
+                                    <div class="alert alert-danger mb-0">
+                                        <strong>Kalan Borç:</strong> @selectedExistingPayment.RemainingAmountText
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                }
+
+                    <!-- New Payment Form -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Yeni Ödeme Tutarı <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₺</span>
+                                <input type="number" class="form-control" 
+                                       @bind="addToExistingPayment.PaymentAmount" 
+                                       step="0.01" min="0.01" max="@selectedExistingPayment.RemainingAmount"
+                                       placeholder="Ödeme tutarı">
+                            </div>
+                            <small class="text-muted">Maksimum: @selectedExistingPayment.RemainingAmountText</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ödeme Yöntemi <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="addToExistingPayment.PaymentMethod">
+                                <option value="Nakit">Nakit</option>
+                                <option value="Kart">Kredi Kartı</option>
+                                <option value="Havale">Havale/EFT</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Açıklama (Opsiyonel)</label>
+                            <textarea class="form-control" @bind="addToExistingPayment.Description" rows="2" 
+                                      placeholder="Ödeme ile ilgili notlar..."></textarea>
+                        </div>
+                    </div>
+
+                    @if (addToExistingPayment.PaymentAmount > 0)
+                    {
+                        <div class="alert alert-info mt-3">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <strong>Alınacak Ödeme:</strong><br>
+                                    <span class="text-success fs-5">₺@addToExistingPayment.PaymentAmount.ToString("N2")</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Ödeme Yöntemi:</strong><br>
+                                    <span class="fs-5">@addToExistingPayment.PaymentMethod</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Yeni Kalan:</strong><br>
+                                    <span class="text-danger fs-5">₺@((selectedExistingPayment.RemainingAmount - addToExistingPayment.PaymentAmount).ToString("N2"))</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddToExistingModal">
+                        <i class="fas fa-times me-2"></i>İptal
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="SaveAddToExistingPayment" 
+                            disabled="@(addToExistingPayment.PaymentAmount <= 0 || addToExistingPayment.PaymentAmount > selectedExistingPayment.RemainingAmount || isProcessing)">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="fas fa-save me-2"></i>Ödemeyi Kaydet
+                    </button>
+                </div>
             </div>
-        }
-    </ChildContent>
-    <FooterContent>
-        <button type="button" class="btn btn-secondary" @onclick="ClosePaymentDetailModal">
-            <i class="fas fa-times me-1"></i>
-            Kapat
-        </button>
-        <button type="button" class="btn btn-primary" @onclick="() => PrintReceipt(selectedPayment?.Id ?? 0)">
-            <i class="fas fa-print me-1"></i>
-            Fiş Yazdır
-        </button>
-    </FooterContent>
-</Modal>
+        </div>
+    </div>
+}
+
+<!-- Pay Installment Modal -->
+@if (showPayInstallmentModal && selectedInstallment != null)
+{
+    <div class="payment-modal-overlay" @onclick="ClosePayInstallmentModal">
+        <div class="payment-modal-container" @onclick:stopPropagation="true" style="max-width: 500px;">
+            <div class="payment-modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-money-check-alt me-2"></i>Taksit Ödemesi Al
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="ClosePayInstallmentModal"></button>
+                </div>
+                <div class="modal-body" style="pointer-events: auto;">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMessage
+                        </div>
+                    }
+                    
+                    <!-- Installment Info -->
+                    <div class="card border-warning mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Taksit Bilgisi</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-6">
+                                    <strong>Taksit Tutarı:</strong><br>
+                                    <span class="text-warning fs-4">@selectedInstallment.AmountText</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Vade Tarihi:</strong><br>
+                                    <span class="fs-5">@selectedInstallment.DueDateText</span>
+                                    @if (selectedInstallment.IsOverdue)
+                                    {
+                                        <br><span class="badge bg-danger">@selectedInstallment.OverdueDays gün gecikme</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="mb-3">
+                        <label class="form-label">Ödeme Yöntemi <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-lg" @bind="payInstallmentModel.PaymentMethod">
+                            <option value="Nakit">Nakit</option>
+                            <option value="Kart">Kredi Kartı</option>
+                            <option value="Havale">Havale/EFT</option>
+                        </select>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label class="form-label">Not (Opsiyonel)</label>
+                        <textarea class="form-control" @bind="payInstallmentModel.Notes" rows="2" 
+                                  placeholder="Taksit ödemesi ile ilgili notlar..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePayInstallmentModal">
+                        <i class="fas fa-times me-2"></i>İptal
+                    </button>
+                    <button type="button" class="btn btn-warning text-dark" @onclick="SavePayInstallment" 
+                            disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="fas fa-check me-2"></i>Taksiti Tahsil Et
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Payment Details Modal -->
+@if (showPaymentDetailsModal && selectedExistingPayment != null)
+{
+    <div class="payment-modal-overlay" @onclick="ClosePaymentDetailsModal">
+        <div class="payment-modal-container" @onclick:stopPropagation="true" style="max-width: 700px;">
+            <div class="payment-modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye me-2"></i>Ödeme Detayları
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ClosePaymentDetailsModal"></button>
+                </div>
+                <div class="modal-body" style="pointer-events: auto;">
+                    <!-- Payment Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Müşteri Bilgileri</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Ad Soyad:</strong> @selectedExistingPayment.CustomerName</p>
+                                    <p class="mb-2"><strong>Telefon:</strong> @selectedExistingPayment.CustomerPhone</p>
+                                    <p class="mb-0"><strong>Hizmet:</strong> @selectedExistingPayment.ServiceTypeName</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Ödeme Özeti</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2"><strong>Toplam Tutar:</strong> <span class="text-primary">@selectedExistingPayment.TotalAmountText</span></p>
+                                    <p class="mb-2"><strong>Ödenen:</strong> <span class="text-success">@selectedExistingPayment.PaidAmountText</span></p>
+                                    <p class="mb-2"><strong>Kalan:</strong> <span class="text-danger">@selectedExistingPayment.RemainingAmountText</span></p>
+                                    <p class="mb-0"><strong>Durum:</strong> <span class="badge bg-@selectedExistingPayment.StatusColor">@selectedExistingPayment.PaymentStatusText</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Info -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-receipt me-2"></i>Ödeme Bilgileri</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <p class="mb-2"><strong>Ödeme Tarihi:</strong><br>@selectedExistingPayment.PaymentDate.ToString("dd.MM.yyyy")</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-2"><strong>Ödeme Yöntemi:</strong><br>@selectedExistingPayment.PaymentMethodText</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-2"><strong>Randevu Tarihi:</strong><br>@(selectedExistingPayment.AppointmentDate?.ToString("dd.MM.yyyy HH:mm") ?? "Belirtilmemiş")</p>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedExistingPayment.Description))
+                            {
+                                <div class="mt-3">
+                                    <strong>Açıklama:</strong>
+                                    <p class="text-muted mb-0">@selectedExistingPayment.Description</p>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(selectedExistingPayment.ReferenceNumber))
+                            {
+                                <div class="mt-2">
+                                    <strong>Referans No:</strong>
+                                    <p class="text-muted mb-0">@selectedExistingPayment.ReferenceNumber</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Installments -->
+                    @if (selectedExistingPayment.Installments?.Any() == true)
+                    {
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>Taksitler</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Tutar</th>
+                                                <th>Vade</th>
+                                                <th>Ödeme Tarihi</th>
+                                                <th>Durum</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var installment in selectedExistingPayment.Installments)
+                                            {
+                                                <tr class="@(installment.IsOverdue ? "table-danger" : "")">
+                                                    <td>@installment.AmountText</td>
+                                                    <td>@installment.DueDateText</td>
+                                                    <td>@installment.PaidDateText</td>
+                                                    <td>
+                                                        <span class="badge bg-@installment.StatusColor">
+                                                            @installment.StatusText
+                                                            @if (installment.IsOverdue)
+                                                            {
+                                                                <span> (@installment.OverdueDays gün)</span>
+                                                            }
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePaymentDetailsModal">
+                        <i class="fas fa-times me-2"></i>Kapat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <style>
     .page-title {
         color: #667eea;
         font-weight: 600;
-        margin-bottom: 0;
     }
 
     .stat-card {
@@ -539,7 +887,6 @@
         padding: 20px;
         position: relative;
         overflow: hidden;
-        height: 120px;
         display: flex;
         align-items: center;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -557,10 +904,9 @@
     }
 
     .stat-content h3 {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         margin: 0;
-        line-height: 1;
     }
 
     .stat-content p {
@@ -569,42 +915,16 @@
         opacity: 0.9;
     }
 
-    .card {
+    .nav-tabs .nav-link {
+        color: #6c757d;
         border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
+        padding: 10px 20px;
     }
 
-    .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-bottom: none;
-        border-radius: 10px 10px 0 0;
-    }
-
-    .avatar-circle {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-    }
-
-    .payment-date {
-        min-width: 120px;
-    }
-
-    .service-info {
-        min-width: 150px;
-    }
-
-    .amount-info {
-        min-width: 100px;
+    .nav-tabs .nav-link.active {
+        color: #667eea;
+        background: white;
+        border-bottom: 3px solid #667eea;
     }
 
     .table th {
@@ -614,482 +934,425 @@
         font-weight: 600;
     }
 
-    .table-hover tbody tr:hover {
-        background-color: rgba(102, 126, 234, 0.1);
+    .modal-header.bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     }
 
-    .btn-group .btn {
-        border-radius: 4px;
-        margin-right: 2px;
-    }
-
-    .btn-group .btn:last-child {
-        margin-right: 0;
-    }
-
-    .bg-cash {
-        background-color: #28a745 !important;
-    }
-
-    .bg-card {
-        background-color: #0d3b66 !important;
-    }
-
-    .bg-transfer {
-        background-color: #17a2b8 !important;
-    }
-
-    .payment-detail-card {
-        background: #f8f9fa;
+    .alert {
+        border: none;
         border-radius: 10px;
+    }
+
+    .modal {
+        pointer-events: auto !important;
+    }
+
+    .modal-dialog {
+        pointer-events: auto !important;
+    }
+
+    .modal-content {
+        pointer-events: auto !important;
+    }
+
+    .form-select, .form-control {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    .payment-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 20px;
-        border: 1px solid #e9ecef;
     }
 
-    .service-detail-section {
-        background: #fff;
-        border-radius: 10px;
-        padding: 20px;
-        border: 1px solid #e9ecef;
+    .payment-modal-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
     }
 
-    .service-detail-card {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        border: 1px solid #dee2e6;
-        margin-top: 10px;
+    .payment-modal-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
 
-    .section-title {
-        color: #667eea;
-        font-weight: 600;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #667eea;
-        padding-bottom: 5px;
+    .payment-modal-container .form-select,
+    .payment-modal-container .form-control,
+    .payment-modal-container input,
+    .payment-modal-container textarea,
+    .payment-modal-container select {
+        pointer-events: auto !important;
+        -webkit-appearance: auto !important;
+        appearance: auto !important;
+        user-select: auto !important;
+        cursor: pointer !important;
+        position: relative !important;
+        z-index: auto !important;
     }
 
-    .detail-group {
-        margin-bottom: 15px;
-    }
-
-    .detail-label {
-        font-weight: 600;
-        color: #495057;
-        font-size: 0.9rem;
-        margin-bottom: 5px;
-        display: block;
-    }
-
-    .detail-value {
-        color: #212529;
-        font-size: 1rem;
+    .payment-modal-container select option {
+        pointer-events: auto !important;
+        cursor: pointer !important;
     }
 </style>
 
 @code {
-    private List<PaymentModel> payments = new();
-    private List<PaymentModel> filteredPayments = new();
+    private PaymentSummaryModel? paymentSummary;
+    private List<PendingAppointmentModel> pendingAppointments = new();
+    private List<dynamic> overdueInstallments = new();
+    private PendingAppointmentModel? selectedAppointment;
+    private CreatePaymentModel newPayment = new();
+    
+    // New variables for customer-first flow
+    private List<CustomerWithAppointmentModel> customersWithAppointments = new();
+    private List<PendingAppointmentModel> customerAppointments = new();
+    private int selectedCustomerId = 0;
+    
+    private bool showAddPaymentModal = false;
+    private bool showAddToExistingModal = false;
+    private bool showPayInstallmentModal = false;
+    private bool showPaymentDetailsModal = false;
+    
+    private bool isProcessing = false;
     private bool isLoading = true;
-    private string searchTerm = "";
-    private string selectedPaymentMethod = "";
-    private string dateFilter = "month";
-
-    private decimal totalRevenue = 0;
-    private decimal todayRevenue = 0;
-    private decimal weeklyRevenue = 0;
-    private int totalPayments = 0;
-
-    // Modal variables
-    private PaymentCreateRequest paymentModel = new();
-    private bool isEditMode = false;
-    private bool isSaving = false;
-    private bool showPaymentModal = false;
-    private bool showPaymentDetailModal = false;
-    private int selectedPaymentId = 0;
-    private PaymentModel? selectedPayment = null;
-    private AppointmentModel? selectedAppointment = null;
-
-    // Data for dropdowns
-    private List<CustomerModel> customers = new();
-    private List<AppointmentModel> appointments = new();
-    private List<AppointmentModel> filteredAppointments = new();
-
-    private bool authChecked = false;
-
+    private bool loadingAppointments = false;
+    private string activeTab = "payments";
+    private string installmentOption = "none";
+    private string errorMessage = "";
+    
+    // For additional modals
+    private PaymentModel? selectedExistingPayment;
+    private PaymentInstallmentModel? selectedInstallment;
+    private UpdatePaymentModel addToExistingPayment = new();
+    private PayInstallmentModel payInstallmentModel = new();
+    
     protected override async Task OnInitializedAsync()
     {
-        // Skip auth check in OnInitialized - will be done in OnAfterRender
+        await LoadData();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task LoadData()
     {
-        if (firstRender && !authChecked)
-        {
-            authChecked = true;
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            if (authState.User.Identity?.IsAuthenticated != true)
-            {
-                Navigation.NavigateTo("/login");
-                return;
-            }
-            await LoadPayments();
-            await LoadStatistics();
-            await LoadCustomers();
-            await LoadAppointments();
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadPayments()
-    {
+        isLoading = true;
         try
         {
-            isLoading = true;
+            // Force refresh the payment data
+            paymentSummary = null;
+            StateHasChanged();
             
-            DateTime startDate, endDate;
-            switch (dateFilter)
-            {
-                case "today":
-                    startDate = DateTime.Today;
-                    endDate = DateTime.Today.AddDays(1);
-                    break;
-                case "week":
-                    startDate = DateTime.Today.AddDays(-7);
-                    endDate = DateTime.Today.AddDays(1);
-                    break;
-                case "month":
-                    startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                    endDate = startDate.AddMonths(1);
-                    break;
-                default:
-                    startDate = DateTime.Today.AddDays(-30);
-                    endDate = DateTime.Today.AddDays(1);
-                    break;
-            }
-
-            payments = await PaymentService.GetPaymentsByDateRangeAsync(startDate, endDate);
-            ApplyFilters();
+            paymentSummary = await PaymentService.GetPaymentSummaryAsync();
+            overdueInstallments = await PaymentService.GetOverdueInstallmentsAsync();
+            
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödemeler yüklenirken bir hata oluştu.", "danger");
+            await JSRuntime.InvokeVoidAsync("console.error", "LoadData Error:", ex.Message);
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 
-    private async Task LoadStatistics()
+    private async Task RefreshData()
     {
-        try
-        {
-            var allPayments = await PaymentService.GetAllPaymentsAsync();
-            totalRevenue = allPayments.Sum(p => p.Amount);
-            totalPayments = allPayments.Count;
-
-            var todayPayments = allPayments.Where(p => p.PaymentDate.Date == DateTime.Today);
-            todayRevenue = todayPayments.Sum(p => p.Amount);
-
-            var weekStart = DateTime.Today.AddDays(-7);
-            var weeklyPayments = allPayments.Where(p => p.PaymentDate >= weekStart);
-            weeklyRevenue = weeklyPayments.Sum(p => p.Amount);
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "İstatistikler yüklenirken bir hata oluştu.", "danger");
-        }
+        await JSRuntime.InvokeVoidAsync("showToast", "Bilgi", "Veriler yenileniyor...", "info");
+        await LoadData();
+        await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Veriler yenilendi.", "success");
     }
 
-    private async Task LoadCustomers()
+    private void SetActiveTab(string tab)
     {
-        try
-        {
-            customers = await CustomerService.GetAllCustomersAsync();
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Müşteriler yüklenirken bir hata oluştu.", "danger");
-        }
-    }
-
-    private async Task LoadAppointments()
-    {
-        try
-        {
-            appointments = await AppointmentService.GetAllAppointmentsAsync();
-            filteredAppointments = appointments;
-        }
-        catch (Exception ex)
-        {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Randevular yüklenirken bir hata oluştu.", "danger");
-        }
-    }
-
-    private void ApplyFilters()
-    {
-        filteredPayments = payments.Where(p => 
-            (string.IsNullOrEmpty(searchTerm) || 
-             p.CustomerName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrEmpty(selectedPaymentMethod) || p.PaymentMethod == selectedPaymentMethod)
-        ).OrderByDescending(p => p.PaymentDate).ToList();
-    }
-
-    private async Task OnSearchChanged(ChangeEventArgs e)
-    {
-        searchTerm = e.Value?.ToString() ?? "";
-        ApplyFilters();
-        await Task.CompletedTask;
-    }
-
-    private async Task OnPaymentMethodChanged(ChangeEventArgs e)
-    {
-        selectedPaymentMethod = e.Value?.ToString() ?? "";
-        ApplyFilters();
-        await Task.CompletedTask;
-    }
-
-    private async Task SetDateFilter(string filter)
-    {
-        dateFilter = filter;
-        await LoadPayments();
-    }
-
-    private string GetPaymentMethodColor(string method)
-    {
-        return method switch
-        {
-            "Cash" => "success",
-            "Card" => "primary",
-            "Transfer" => "info",
-            _ => "secondary"
-        };
-    }
-
-    private string GetPaymentMethodText(string method)
-    {
-        return method switch
-        {
-            "Cash" => "Nakit",
-            "Card" => "Kredi Kartı",
-            "Transfer" => "Havale",
-            _ => method
-        };
+        activeTab = tab;
     }
 
     private async Task OpenAddPaymentModal()
     {
-        isEditMode = false;
-        paymentModel = new PaymentCreateRequest 
-        { 
-            PaymentDate = DateTime.Now,
-            PaymentMethod = "Cash",
-            PaymentType = "Full"
-        };
-        showPaymentModal = true;
+        loadingAppointments = true;
+        showAddPaymentModal = true;
+        errorMessage = "";
         
-        StateHasChanged();
-        await Task.CompletedTask;
-    }
-
-    private async Task ViewPaymentDetails(int paymentId)
-    {
-        selectedPaymentId = paymentId;
-        showPaymentDetailModal = true;
-        await LoadPaymentDetails(paymentId);
-        StateHasChanged();
-    }
-
-    private void PrintReceipt(int paymentId)
-    {
-        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", $"Fiş yazdırma özelliği henüz hazırlanmadı. ID: {paymentId}", "info");
-    }
-
-    private async Task EditPayment(PaymentModel payment)
-    {
         try
         {
-            isEditMode = true;
-            selectedPaymentId = payment.Id;
-            paymentModel = new PaymentCreateRequest
-            {
-                CustomerId = payment.CustomerId,
-                AppointmentId = payment.AppointmentId,
-                Amount = payment.Amount,
-                PaymentMethod = payment.PaymentMethod,
-                PaymentType = payment.PaymentType,
-                PaymentDate = payment.PaymentDate,
-                Description = payment.Description,
-                ReferenceNumber = payment.ReferenceNumber
-            };
+            pendingAppointments = await PaymentService.GetPendingAppointmentsAsync();
+            
+            // Group customers
+            customersWithAppointments = pendingAppointments
+                .GroupBy(a => new { a.CustomerId, a.CustomerName, a.CustomerPhone })
+                .Select(g => new CustomerWithAppointmentModel
+                {
+                    CustomerId = g.Key.CustomerId,
+                    CustomerName = g.Key.CustomerName,
+                    CustomerPhone = g.Key.CustomerPhone
+                })
+                .OrderBy(c => c.CustomerName)
+                .ToList();
+            
+            newPayment = new CreatePaymentModel { PaymentDate = DateTime.Today };
+            selectedAppointment = null;
+            selectedCustomerId = 0;
+            customerAppointments.Clear();
+            installmentOption = "none";
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", "OpenAddPaymentModal Error:", ex.Message);
+            errorMessage = "Randevu bilgileri yüklenirken hata oluştu: " + ex.Message;
+        }
+        finally
+        {
+            loadingAppointments = false;
+        }
+    }
+
+    private void CloseAddPaymentModal()
+    {
+        showAddPaymentModal = false;
+        selectedAppointment = null;
+        selectedCustomerId = 0;
+        customerAppointments.Clear();
+        customersWithAppointments.Clear();
+        newPayment = new();
+        installmentOption = "none";
+        errorMessage = "";
+    }
+
+    private void OnCustomerSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int customerId))
+        {
+            selectedCustomerId = customerId;
             
             // Filter appointments for selected customer
-            FilterAppointmentsByCustomer(payment.CustomerId);
+            customerAppointments = pendingAppointments
+                .Where(a => a.CustomerId == customerId)
+                .OrderByDescending(a => a.AppointmentDate)
+                .ToList();
             
-            showPaymentModal = true;
-            StateHasChanged();
+            // Reset appointment selection
+            selectedAppointment = null;
+            newPayment = new CreatePaymentModel { PaymentDate = DateTime.Today };
+            installmentOption = "none";
         }
-        catch (Exception)
+        else
         {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödeme düzenleme sırasında bir hata oluştu.", "danger");
+            selectedCustomerId = 0;
+            customerAppointments.Clear();
+            selectedAppointment = null;
         }
     }
 
-    private void ClosePaymentModal()
+    private void OnAppointmentSelected(ChangeEventArgs e)
     {
-        showPaymentModal = false;
-        isEditMode = false;
-        paymentModel = new PaymentCreateRequest();
-        filteredAppointments = appointments;
-    }
-
-    private void ClosePaymentDetailModal()
-    {
-        showPaymentDetailModal = false;
-        selectedPayment = null;
-        selectedAppointment = null;
-    }
-
-    private async Task LoadPaymentDetails(int paymentId)
-    {
-        try
+        if (int.TryParse(e.Value?.ToString(), out int appointmentId))
         {
-            selectedPayment = payments.FirstOrDefault(p => p.Id == paymentId);
-            if (selectedPayment != null && selectedPayment.AppointmentId.HasValue)
+            selectedAppointment = customerAppointments.FirstOrDefault(a => a.Id == appointmentId);
+            if (selectedAppointment != null)
             {
-                selectedAppointment = appointments.FirstOrDefault(a => a.Id == selectedPayment.AppointmentId.Value);
+                newPayment.CustomerId = selectedAppointment.CustomerId;
+                newPayment.AppointmentId = selectedAppointment.Id;
+                newPayment.TotalAmount = selectedAppointment.FinalPrice; // Use total appointment price
+                newPayment.InitialPayment = 0; // User will enter the amount
+                newPayment.PaymentDate = DateTime.Today;
+                installmentOption = "none";
             }
         }
-        catch (Exception)
+        else
         {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödeme detayları yüklenirken bir hata oluştu.", "danger");
+            selectedAppointment = null;
+            newPayment = new CreatePaymentModel { PaymentDate = DateTime.Today };
         }
     }
 
     private async Task SavePayment()
     {
+        if (selectedAppointment == null || newPayment.InitialPayment <= 0) return;
+
+        isProcessing = true;
         try
         {
-            isSaving = true;
+            // Set payment details
+            newPayment.CustomerId = selectedAppointment.CustomerId;
+            newPayment.AppointmentId = selectedAppointment.Id;
+            newPayment.TotalAmount = selectedAppointment.RemainingAmount;
             
-            if (isEditMode)
+            // Set installment count if selected
+            if (installmentOption != "none" && newPayment.InitialPayment < selectedAppointment.RemainingAmount)
             {
-                var updateModel = new CreatePaymentModel
-                {
-                    CustomerId = paymentModel.CustomerId,
-                    AppointmentId = paymentModel.AppointmentId,
-                    Amount = paymentModel.Amount,
-                    PaymentMethod = paymentModel.PaymentMethod,
-                    PaymentType = paymentModel.PaymentType,
-                    PaymentDate = paymentModel.PaymentDate,
-                    Description = paymentModel.Description,
-                    ReferenceNumber = paymentModel.ReferenceNumber
-                };
+                newPayment.InstallmentCount = int.Parse(installmentOption);
                 
-                var success = await PaymentService.UpdatePaymentAsync(selectedPaymentId, updateModel);
-                if (success)
+                // Create installment list
+                var remainingAmount = selectedAppointment.RemainingAmount - newPayment.InitialPayment;
+                var installmentAmount = remainingAmount / newPayment.InstallmentCount.Value;
+                
+                newPayment.Installments = new List<CreateInstallmentModel>();
+                for (int i = 1; i <= newPayment.InstallmentCount.Value; i++)
                 {
-                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Ödeme başarıyla güncellendi.", "success");
-                    showPaymentModal = false;
-                    isEditMode = false;
-                    await LoadPayments();
-                    await LoadStatistics();
-                }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödeme güncellenirken bir hata oluştu.", "danger");
+                    newPayment.Installments.Add(new CreateInstallmentModel
+                    {
+                        Amount = installmentAmount,
+                        DueDate = newPayment.PaymentDate.AddMonths(i),
+                        Notes = $"{i}. Taksit"
+                    });
                 }
             }
             else
             {
-                var createModel = new CreatePaymentModel
-                {
-                    CustomerId = paymentModel.CustomerId,
-                    AppointmentId = paymentModel.AppointmentId,
-                    Amount = paymentModel.Amount,
-                    PaymentMethod = paymentModel.PaymentMethod,
-                    PaymentType = paymentModel.PaymentType,
-                    PaymentDate = paymentModel.PaymentDate,
-                    Description = paymentModel.Description,
-                    ReferenceNumber = paymentModel.ReferenceNumber
-                };
-                
-                var result = await PaymentService.CreatePaymentAsync(createModel);
-                if (result != null)
-                {
-                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Ödeme başarıyla eklendi.", "success");
-                    showPaymentModal = false;
-                    isEditMode = false;
-                    paymentModel = new PaymentCreateRequest();
-                    await LoadPayments();
-                    await LoadStatistics();
-                }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Ödeme eklenirken bir hata oluştu.", "danger");
-                }
+                newPayment.InstallmentCount = null;
+                newPayment.Installments = null;
+            }
+
+            var success = await PaymentService.CreatePaymentAsync(newPayment);
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Ödeme başarıyla kaydedildi.", "success");
+                CloseAddPaymentModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Ödeme kaydedilirken bir hata oluştu.";
+            }
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void ViewPaymentDetails(PaymentModel payment)
+    {
+        selectedExistingPayment = payment;
+        showPaymentDetailsModal = true;
+    }
+
+    private void ShowAddPaymentToExisting(PaymentModel payment)
+    {
+        selectedExistingPayment = payment;
+        addToExistingPayment = new UpdatePaymentModel 
+        { 
+            Id = payment.Id, 
+            PaymentAmount = 0,
+            PaymentMethod = "Nakit"
+        };
+        showAddToExistingModal = true;
+    }
+
+    private void PayInstallment(PaymentInstallmentModel installment)
+    {
+        selectedInstallment = installment;
+        payInstallmentModel = new PayInstallmentModel
+        {
+            InstallmentId = installment.Id,
+            PaymentMethod = "Nakit"
+        };
+        showPayInstallmentModal = true;
+    }
+
+    private void CollectOverduePayment(dynamic overdue)
+    {
+        // Convert dynamic to PaymentInstallmentModel for collection
+        var installment = new PaymentInstallmentModel
+        {
+            Id = overdue.id,
+            Amount = overdue.amount,
+            DueDate = DateTime.Parse(overdue.dueDate.ToString())
+        };
+        PayInstallment(installment);
+    }
+
+    private void CloseAddToExistingModal()
+    {
+        showAddToExistingModal = false;
+        selectedExistingPayment = null;
+        addToExistingPayment = new();
+        errorMessage = "";
+    }
+
+    private void ClosePayInstallmentModal()
+    {
+        showPayInstallmentModal = false;
+        selectedInstallment = null;
+        payInstallmentModel = new();
+        errorMessage = "";
+    }
+
+    private void ClosePaymentDetailsModal()
+    {
+        showPaymentDetailsModal = false;
+        selectedExistingPayment = null;
+    }
+
+    private async Task SaveAddToExistingPayment()
+    {
+        try
+        {
+            isProcessing = true;
+            var success = await PaymentService.AddPaymentAsync(addToExistingPayment.Id, addToExistingPayment);
+            
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Ödeme başarıyla eklendi.", "success");
+                CloseAddToExistingModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Ödeme eklenirken bir hata oluştu.";
             }
         }
         catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", $"İşlem sırasında bir hata oluştu: {ex.Message}", "danger");
+            errorMessage = $"Hata: {ex.Message}";
         }
         finally
         {
-            isSaving = false;
+            isProcessing = false;
         }
     }
 
-    private void FilterAppointmentsByCustomer(int customerId)
+    private async Task SavePayInstallment()
     {
-        if (customerId > 0)
+        try
         {
-            filteredAppointments = appointments.Where(a => a.CustomerId == customerId).ToList();
+            isProcessing = true;
+            var success = await PaymentService.PayInstallmentAsync(payInstallmentModel.InstallmentId, payInstallmentModel);
+            
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Taksit ödemesi alındı.", "success");
+                ClosePayInstallmentModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Taksit ödemesi alınırken bir hata oluştu.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            filteredAppointments = appointments;
+            errorMessage = $"Hata: {ex.Message}";
         }
-    }
-
-    private async Task OnCustomerChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int customerId))
+        finally
         {
-            paymentModel.CustomerId = customerId;
-            paymentModel.AppointmentId = null; // Reset appointment selection
-            FilterAppointmentsByCustomer(customerId);
-            StateHasChanged();
+            isProcessing = false;
         }
-        await Task.CompletedTask;
-    }
-
-    private string GetAppointmentStatusColor(string status)
-    {
-        return status switch
-        {
-            "Scheduled" => "primary",
-            "Confirmed" => "info",
-            "InProgress" => "warning",
-            "Completed" => "success",
-            "Cancelled" => "danger",
-            "NoShow" => "dark",
-            _ => "secondary"
-        };
-    }
-
-    private string GetAppointmentStatusText(string status)
-    {
-        return status switch
-        {
-            "Scheduled" => "Planlandı",
-            "Confirmed" => "Onaylandı",
-            "InProgress" => "Devam Ediyor",
-            "Completed" => "Tamamlandı",
-            "Cancelled" => "İptal Edildi",
-            "NoShow" => "Gelmedi",
-            _ => status
-        };
     }
 }

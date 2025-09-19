@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(dotnet nuget list:*)",
+      "Bash(dotnet nuget disable source:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet build)",
+      "Bash(dotnet run:*)"
+    ],
+    "deny": [],
+    "defaultMode": "acceptEdits"
+  }
+}

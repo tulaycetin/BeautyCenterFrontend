@@ -32,7 +32,7 @@ builder.Services.AddServerSideBlazor(options =>
 // Add HttpClient for API calls
 builder.Services.AddHttpClient<ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7185/"); // API base address
+    client.BaseAddress = new Uri("http://localhost:5001/"); // API base address
 });
 
 // Add LocalStorage

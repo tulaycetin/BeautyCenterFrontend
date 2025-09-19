@@ -8,7 +8,6 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-
 <PageTitle>Hizmet Yönetimi - Güzellik Merkezi</PageTitle>
 
 <div class="service-management">
@@ -590,6 +589,7 @@
 
     private bool authChecked = false;
 
+
     protected override async Task OnInitializedAsync()
     {
         // Skip auth check in OnInitialized - will be done in OnAfterRender
@@ -606,6 +606,7 @@
                 Navigation.NavigateTo("/login");
                 return;
             }
+
             await LoadServices();
             StateHasChanged();
         }
@@ -881,7 +882,7 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "İşlem sırasında bir hata oluştu.", "danger");
         }
@@ -915,4 +916,5 @@
         else
             return "spa";
     }
+
 }

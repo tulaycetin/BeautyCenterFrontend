@@ -1,0 +1,575 @@
+@page "/superadmin"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Super Admin Panel</PageTitle>
+
+<div class="dashboard">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="dashboard-title">
+                <i class="fas fa-crown me-2"></i>
+                Super Admin Panel
+            </h1>
+            <p class="text-muted">Tüm güzellik merkezlerini yönet</p>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-gradient-primary text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>@totalTenants</h3>
+                        <p>Toplam Güzellik Merkezi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-gradient-success text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>@activeTenants</h3>
+                        <p>Aktif Merkezler</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-gradient-info text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-users-cog"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>@totalUsers</h3>
+                        <p>Toplam Kullanıcı</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card bg-gradient-warning text-white">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>@newTenantsThisMonth</h3>
+                        <p>Bu Ay Yeni Merkez</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Güzellik Merkezleri Yönetimi
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success" @onclick="OpenAddTenantModal">
+                                <i class="fas fa-plus me-2"></i>
+                                Yeni Merkez Ekle
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Merkez Adı</th>
+                                        <th>Alt Domain</th>
+                                        <th>Şehir</th>
+                                        <th>Plan</th>
+                                        <th>Kullanıcı</th>
+                                        <th>Müşteri</th>
+                                        <th>Durum</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (tenants != null)
+                                    {
+                                        @foreach (var tenant in tenants)
+                                        {
+                                            <tr>
+                                                <td>@tenant.Name</td>
+                                                <td><span class="badge bg-secondary">@tenant.SubDomain</span></td>
+                                                <td>@(tenant.City ?? "-")</td>
+                                                <td>
+                                                    <span class="badge bg-info">@tenant.SubscriptionPlan</span>
+                                                </td>
+                                                <td>@tenant.UserCount / @tenant.MaxUsers</td>
+                                                <td>@tenant.CustomerCount / @tenant.MaxCustomers</td>
+                                                <td>
+                                                    @if (tenant.IsActive)
+                                                    {
+                                                        <span class="badge bg-success">Aktif</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-danger">Pasif</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewTenant(tenant)">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => EditTenant(tenant)">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        @if (tenant.Id != 1)
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTenant(tenant.Id)">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            Kullanıcı Yönetimi
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>Toplam Kullanıcı: <strong>@totalUsers</strong></span>
+                            <button class="btn btn-info btn-sm" @onclick="OpenAddUserModal">
+                                <i class="fas fa-user-plus me-1"></i>
+                                Yeni Kullanıcı
+                            </button>
+                        </div>
+                        <div class="list-group">
+                            @if (recentUsers != null)
+                            {
+                                @foreach (var user in recentUsers)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>@user.FirstName @user.LastName</strong>
+                                            <br>
+                                            <small class="text-muted">@user.Role</small>
+                                        </div>
+                                        <span class="badge bg-@(user.IsActive ? "success" : "danger")">
+                                            @(user.IsActive ? "Aktif" : "Pasif")
+                                        </span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Sistem İstatistikleri
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center p-3">
+                                    <h4 class="text-primary">@totalRevenue.ToString("C")</h4>
+                                    <small class="text-muted">Toplam Gelir</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3">
+                                    <h4 class="text-success">@totalCustomers</h4>
+                                    <small class="text-muted">Toplam Müşteri</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3">
+                                    <h4 class="text-info">@totalAppointments</h4>
+                                    <small class="text-muted">Toplam Randevu</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3">
+                                    <h4 class="text-warning">@totalServices</h4>
+                                    <small class="text-muted">Toplam Hizmet</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* Modal for Tenant Details *@
+@if (showDetailsModal && selectedTenant != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tenant Detayları</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDetailsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>İsim:</strong> @selectedTenant.Name</p>
+                            <p><strong>Alt Alan:</strong> @selectedTenant.SubDomain</p>
+                            <p><strong>E-posta:</strong> @selectedTenant.Email</p>
+                            <p><strong>Telefon:</strong> @selectedTenant.Phone</p>
+                            <p><strong>Şehir:</strong> @selectedTenant.City</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Abonelik Planı:</strong> @selectedTenant.SubscriptionPlan</p>
+                            <p><strong>Max Kullanıcı:</strong> @selectedTenant.MaxUsers</p>
+                            <p><strong>Max Müşteri:</strong> @selectedTenant.MaxCustomers</p>
+                            <p><strong>Müşteri Sayısı:</strong> @selectedTenant.CustomerCount</p>
+                            <p><strong>Durum:</strong> @(selectedTenant.IsActive ? "Aktif" : "Pasif")</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDetailsModal = false">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal for Edit Tenant *@
+@if (showEditModal && selectedTenant != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tenant Düzenle</h5>
+                    <button type="button" class="btn-close" @onclick="() => showEditModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">İsim</label>
+                        <input type="text" class="form-control" @bind="selectedTenant.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-posta</label>
+                        <input type="email" class="form-control" @bind="selectedTenant.Email" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefon</label>
+                        <input type="text" class="form-control" @bind="selectedTenant.Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Şehir</label>
+                        <input type="text" class="form-control" @bind="selectedTenant.City" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Kullanıcı</label>
+                        <input type="number" class="form-control" @bind="selectedTenant.MaxUsers" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Müşteri</label>
+                        <input type="number" class="form-control" @bind="selectedTenant.MaxCustomers" />
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @bind="selectedTenant.IsActive" />
+                            <label class="form-check-label">
+                                Aktif
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showEditModal = false">İptal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveTenantChanges">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal for Delete Confirmation *@
+@if (showDeleteModal && selectedTenant != null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0, 0, 0, 0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Silme Onayı</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>@selectedTenant.Name</strong> tenant'ını silmek istediğinizden emin misiniz?</p>
+                    <p class="text-danger">Bu işlem geri alınamaz!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">İptal</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private int totalTenants = 0;
+    private int activeTenants = 0;
+    private int totalUsers = 0;
+    private int newTenantsThisMonth = 0;
+    private int totalCustomers = 0;
+    private int totalAppointments = 0;
+    private int totalServices = 0;
+    private decimal totalRevenue = 0;
+    private List<TenantDto> tenants = new();
+    private List<UserDto> recentUsers = new();
+    private string userRole = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthAndLoadData();
+    }
+
+    private async Task CheckAuthAndLoadData()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            userRole = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+
+            if (userRole != "SuperAdmin")
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+
+            await LoadDashboard();
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Yetkilendirme kontrolünde hata oluştu.", "danger");
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task LoadDashboard()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Tenant bilgilerini yükle
+            var tenantsResponse = await ApiService.GetAsync<List<TenantDto>>("api/superadmin/tenants");
+            if (tenantsResponse != null)
+            {
+                tenants = tenantsResponse;
+                totalTenants = tenants.Count;
+                activeTenants = tenants.Count(t => t.IsActive);
+                newTenantsThisMonth = tenants.Count(t => t.CreatedAt >= DateTime.UtcNow.AddDays(-30));
+                totalCustomers = tenants.Sum(t => t.CustomerCount);
+            }
+
+            // Kullanıcı bilgilerini yükle
+            var usersResponse = await ApiService.GetAsync<List<UserDto>>("api/superadmin/users");
+            if (usersResponse != null)
+            {
+                var allUsers = usersResponse;
+                totalUsers = allUsers.Count;
+                recentUsers = allUsers.OrderByDescending(u => u.CreatedAt).Take(5).ToList();
+            }
+
+            // Dashboard yüklendiğini göster
+            await JSRuntime.InvokeVoidAsync("showToast", "Başarılı!", "Super Admin dashboard yüklendi.", "success");
+        }
+        catch (Exception)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Hata!", "Dashboard yüklenirken bir hata oluştu.", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenAddTenantModal()
+    {
+        // TODO: Implement add tenant modal
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", "Yeni merkez ekleme özelliği yakında gelecek.", "info");
+    }
+
+    private void OpenAddUserModal()
+    {
+        // TODO: Implement add user modal
+        JSRuntime.InvokeVoidAsync("showToast", "Bilgi", "Yeni kullanıcı ekleme özelliği yakında gelecek.", "info");
+    }
+
+    private TenantDto? selectedTenant;
+    private bool showDetailsModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteModal = false;
+
+    private void ViewTenant(TenantDto tenant)
+    {
+        selectedTenant = tenant;
+        showDetailsModal = true;
+        StateHasChanged();
+    }
+
+    private void EditTenant(TenantDto tenant)
+    {
+        selectedTenant = tenant;
+        showEditModal = true;
+        StateHasChanged();
+    }
+
+    private Task DeleteTenant(int id)
+    {
+        selectedTenant = tenants.FirstOrDefault(t => t.Id == id);
+        showDeleteModal = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedTenant != null)
+        {
+            try
+            {
+                var response = await ApiService.DeleteAsync($"api/superadmin/tenants/{selectedTenant.Id}");
+                if (response)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı", "Tenant başarıyla silindi.", "success");
+                    await LoadDashboard();
+                }
+            }
+            catch (Exception)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Silme işlemi sırasında hata oluştu.", "error");
+            }
+            finally
+            {
+                showDeleteModal = false;
+                selectedTenant = null;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task SaveTenantChanges()
+    {
+        if (selectedTenant != null)
+        {
+            try
+            {
+                var response = await ApiService.PutAsync($"api/superadmin/tenants/{selectedTenant.Id}", selectedTenant);
+                if (response)
+                {
+                    await JSRuntime.InvokeVoidAsync("showToast", "Başarılı", "Tenant güncellendi.", "success");
+                    await LoadDashboard();
+                }
+            }
+            catch (Exception)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Hata", "Güncelleme sırasında hata oluştu.", "error");
+            }
+            finally
+            {
+                showEditModal = false;
+                selectedTenant = null;
+                StateHasChanged();
+            }
+        }
+    }
+}
+
+<style>
+    .stat-card {
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .stat-content h3 {
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    .stat-content p {
+        margin-bottom: 0;
+        opacity: 0.9;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .dashboard-title {
+        color: #2c3e50;
+        font-weight: 700;
+    }
+</style>

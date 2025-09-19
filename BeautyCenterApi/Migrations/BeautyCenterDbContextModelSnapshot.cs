@@ -68,6 +68,9 @@ namespace BeautyCenterApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("TotalPrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
@@ -83,6 +86,8 @@ namespace BeautyCenterApi.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("ServiceTypeId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("UserId");
 
@@ -137,10 +142,15 @@ namespace BeautyCenterApi.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Customers");
                 });
@@ -153,11 +163,7 @@ namespace BeautyCenterApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<int?>("AppointmentId")
+                    b.Property<int>("AppointmentId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -170,6 +176,10 @@ namespace BeautyCenterApi.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
 
@@ -178,7 +188,7 @@ namespace BeautyCenterApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("PaymentType")
+                    b.Property<string>("PaymentStatus")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -186,6 +196,17 @@ namespace BeautyCenterApi.Migrations
                     b.Property<string>("ReferenceNumber")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("RemainingAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -196,7 +217,52 @@ namespace BeautyCenterApi.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.PaymentInstallment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("PaidDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("PaymentInstallments");
                 });
 
             modelBuilder.Entity("BeautyCenterApi.Models.ServiceType", b =>
@@ -233,10 +299,15 @@ namespace BeautyCenterApi.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ServiceTypes");
 
@@ -249,7 +320,8 @@ namespace BeautyCenterApi.Migrations
                             DurationMinutes = 60,
                             IsActive = true,
                             Name = "Cilt Bakımı",
-                            Price = 150m
+                            Price = 150m,
+                            TenantId = 1
                         },
                         new
                         {
@@ -259,7 +331,8 @@ namespace BeautyCenterApi.Migrations
                             DurationMinutes = 90,
                             IsActive = true,
                             Name = "Makyaj",
-                            Price = 200m
+                            Price = 200m,
+                            TenantId = 1
                         },
                         new
                         {
@@ -269,7 +342,8 @@ namespace BeautyCenterApi.Migrations
                             DurationMinutes = 45,
                             IsActive = true,
                             Name = "Kaş Dizaynı",
-                            Price = 100m
+                            Price = 100m,
+                            TenantId = 1
                         },
                         new
                         {
@@ -279,7 +353,8 @@ namespace BeautyCenterApi.Migrations
                             DurationMinutes = 90,
                             IsActive = true,
                             Name = "Masaj",
-                            Price = 250m
+                            Price = 250m,
+                            TenantId = 1
                         },
                         new
                         {
@@ -289,7 +364,108 @@ namespace BeautyCenterApi.Migrations
                             DurationMinutes = 60,
                             IsActive = true,
                             Name = "Epilasyon",
-                            Price = 300m
+                            Price = 300m,
+                            TenantId = 1
+                        });
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxCustomers")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxUsers")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("SubDomain")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SubscriptionEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SubscriptionPlan")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SubscriptionStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tenants");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Country = "Türkiye",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Demo güzellik merkezi",
+                            Email = "demo@beautycenter.com",
+                            IsActive = true,
+                            MaxCustomers = 500,
+                            MaxUsers = 10,
+                            Name = "Demo Güzellik Merkezi",
+                            Phone = "555-0001",
+                            SubDomain = "demo",
+                            SubscriptionEndDate = new DateTime(2024, 12, 31, 23, 59, 59, 0, DateTimeKind.Utc),
+                            SubscriptionPlan = "Premium",
+                            SubscriptionStartDate = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
@@ -335,6 +511,9 @@ namespace BeautyCenterApi.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -345,6 +524,8 @@ namespace BeautyCenterApi.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("Users");
 
                     b.HasData(
@@ -352,12 +533,25 @@ namespace BeautyCenterApi.Migrations
                         {
                             Id = 1,
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "admin@beautycenter.com",
+                            Email = "superadmin@beautycenter.com",
+                            FirstName = "Super",
+                            IsActive = true,
+                            LastName = "Admin",
+                            PasswordHash = "$2a$11$dm4AgGac/is.r.qEOtFP5.xAOUJCqrfVWJXzbe9O53OfpJvb0dEmK",
+                            Role = "SuperAdmin",
+                            Username = "superadmin"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@demo.beautycenter.com",
                             FirstName = "Admin",
                             IsActive = true,
-                            LastName = "User",
+                            LastName = "Demo",
                             PasswordHash = "$2a$11$dm4AgGac/is.r.qEOtFP5.xAOUJCqrfVWJXzbe9O53OfpJvb0dEmK",
-                            Role = "Admin",
+                            Role = "TenantAdmin",
+                            TenantId = 1,
                             Username = "admin"
                         });
                 });
@@ -376,6 +570,12 @@ namespace BeautyCenterApi.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BeautyCenterApi.Models.Tenant", "Tenant")
+                        .WithMany("Appointments")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BeautyCenterApi.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -386,7 +586,20 @@ namespace BeautyCenterApi.Migrations
 
                     b.Navigation("ServiceType");
 
+                    b.Navigation("Tenant");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.Customer", b =>
+                {
+                    b.HasOne("BeautyCenterApi.Models.Tenant", "Tenant")
+                        .WithMany("Customers")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("BeautyCenterApi.Models.Payment", b =>
@@ -394,7 +607,8 @@ namespace BeautyCenterApi.Migrations
                     b.HasOne("BeautyCenterApi.Models.Appointment", "Appointment")
                         .WithMany("Payments")
                         .HasForeignKey("AppointmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .IsRequired();
 
                     b.HasOne("BeautyCenterApi.Models.Customer", "Customer")
                         .WithMany("Payments")
@@ -402,9 +616,49 @@ namespace BeautyCenterApi.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BeautyCenterApi.Models.Tenant", "Tenant")
+                        .WithMany("Payments")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Appointment");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.PaymentInstallment", b =>
+                {
+                    b.HasOne("BeautyCenterApi.Models.Payment", "Payment")
+                        .WithMany("Installments")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.ServiceType", b =>
+                {
+                    b.HasOne("BeautyCenterApi.Models.Tenant", "Tenant")
+                        .WithMany("ServiceTypes")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.User", b =>
+                {
+                    b.HasOne("BeautyCenterApi.Models.Tenant", "Tenant")
+                        .WithMany("Users")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("BeautyCenterApi.Models.Appointment", b =>
@@ -419,9 +673,27 @@ namespace BeautyCenterApi.Migrations
                     b.Navigation("Payments");
                 });
 
+            modelBuilder.Entity("BeautyCenterApi.Models.Payment", b =>
+                {
+                    b.Navigation("Installments");
+                });
+
             modelBuilder.Entity("BeautyCenterApi.Models.ServiceType", b =>
                 {
                     b.Navigation("Appointments");
+                });
+
+            modelBuilder.Entity("BeautyCenterApi.Models.Tenant", b =>
+                {
+                    b.Navigation("Appointments");
+
+                    b.Navigation("Customers");
+
+                    b.Navigation("Payments");
+
+                    b.Navigation("ServiceTypes");
+
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

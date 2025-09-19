@@ -2,28 +2,33 @@ using Microsoft.EntityFrameworkCore;
 using BeautyCenterApi.Data;
 using BeautyCenterApi.Interfaces;
 using BeautyCenterApi.Models;
+using BeautyCenterApi.Services;
 
 namespace BeautyCenterApi.Repositories
 {
     public class ServiceTypeRepository : GenericRepository<ServiceType>, IServiceTypeRepository
     {
-        public ServiceTypeRepository(BeautyCenterDbContext context) : base(context)
+        public ServiceTypeRepository(BeautyCenterDbContext context, ITenantService tenantService)
+            : base(context, tenantService)
         {
         }
 
         public async Task<IEnumerable<ServiceType>> GetActiveServicesAsync()
         {
-            return await _dbSet.Where(s => s.IsActive).ToListAsync();
+            var query = ApplyTenantFilter(_dbSet);
+            return await query.Where(s => s.IsActive).ToListAsync();
         }
 
         public async Task<ServiceType?> GetByNameAsync(string name)
         {
-            return await _dbSet.FirstOrDefaultAsync(s => s.Name == name);
+            var query = ApplyTenantFilter(_dbSet);
+            return await query.FirstOrDefaultAsync(s => s.Name == name);
         }
 
         public async Task<IEnumerable<ServiceType>> GetByPriceRangeAsync(decimal minPrice, decimal maxPrice)
         {
-            return await _dbSet
+            var query = ApplyTenantFilter(_dbSet);
+            return await query
                 .Where(s => s.Price >= minPrice && s.Price <= maxPrice && s.IsActive)
                 .ToListAsync();
         }

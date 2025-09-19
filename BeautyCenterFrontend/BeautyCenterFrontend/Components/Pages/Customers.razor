@@ -8,7 +8,6 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-
 <PageTitle>Müşteri Yönetimi - Güzellik Merkezi</PageTitle>
 
 <div class="customer-management">
@@ -434,7 +433,7 @@
                                         <tr>
                                             <td>@payment.PaymentDate.ToString("dd.MM.yyyy HH:mm")</td>
                                             <td>
-                                                <span class="fw-bold text-success">₺@payment.Amount.ToString("N2")</span>
+                                                <span class="fw-bold text-success">₺@payment.PaidAmount.ToString("N2")</span>
                                             </td>
                                             <td>
                                                 <span class="badge bg-info badge-sm">@payment.PaymentMethodText</span>
@@ -533,7 +532,7 @@
     private bool isLoading = true;
     private string searchTerm = "";
     private bool showActiveOnly = true;
-    
+
     // Form variables
     private CustomerCreateRequest customerModel = new();
     private bool isEditMode = false;
@@ -564,6 +563,7 @@
                 Navigation.NavigateTo("/login");
                 return;
             }
+
             await LoadCustomers();
             StateHasChanged();
         }
@@ -816,4 +816,5 @@
             _ => "secondary"
         };
     }
+
 }
