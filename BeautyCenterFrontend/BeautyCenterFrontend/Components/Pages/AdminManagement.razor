@@ -1,0 +1,726 @@
+@page "/admin-management"
+@using BeautyCenterFrontend.Models
+@using BeautyCenterFrontend.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ApiService ApiService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize(Roles = "SuperAdmin")]
+@rendermode InteractiveServer
+
+<PageTitle>Admin Yönetimi</PageTitle>
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Admin Yönetimi</h3>
+        <button class="btn btn-primary" @onclick="OpenAddModal">
+            <i class="bi bi-plus-circle me-2"></i>Yeni Admin Ekle
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Ara..." @bind="searchTerm" @bind:event="oninput" @onkeyup="FilterAdmins" />
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @onchange="@((e) => { filterRole = e.Value?.ToString() ?? ""; FilterAdmins(); })">
+                            <option value="">Tüm Roller</option>
+                            <option value="SuperAdmin">Süper Admin</option>
+                            <option value="TenantAdmin">Tenant Admin</option>
+                            <option value="Employee">Çalışan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" @onchange="@((e) => { filterStatus = e.Value?.ToString() ?? ""; FilterAdmins(); })">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="true">Aktif</option>
+                            <option value="false">Pasif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>Ad Soyad</th>
+                                <th>E-posta</th>
+                                <th>Rol</th>
+                                <th>Tenant</th>
+                                <th>Durum</th>
+                                <th>Kayıt Tarihi</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (filteredAdmins != null && filteredAdmins.Any())
+                            {
+                                @foreach (var admin in filteredAdmins)
+                                {
+                                    <tr>
+                                        <td>@admin.Id</td>
+                                        <td>@admin.Username</td>
+                                        <td>@admin.FirstName @admin.LastName</td>
+                                        <td>@admin.Email</td>
+                                        <td>
+                                            @switch (admin.Role)
+                                            {
+                                                case "SuperAdmin":
+                                                    <span class="badge bg-danger">Süper Admin</span>
+                                                    break;
+                                                case "TenantAdmin":
+                                                    <span class="badge bg-warning">Tenant Admin</span>
+                                                    break;
+                                                case "Employee":
+                                                    <span class="badge bg-info">Çalışan</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@admin.Role</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admin.TenantId.HasValue && tenants != null)
+                                            {
+                                                var tenant = tenants.FirstOrDefault(t => t.Id == admin.TenantId.Value);
+                                                @(tenant?.Name ?? "-")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (admin.IsActive)
+                                            {
+                                                <span class="badge bg-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Pasif</span>
+                                            }
+                                        </td>
+                                        <td>@admin.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenEditModal(admin)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowCredentials(admin)">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                            @if (admin.Role != "SuperAdmin")
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAdmin(admin.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center">Kayıt bulunamadı</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade @(showModal ? "show d-block" : "")" tabindex="-1" style="@(showModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(isEditMode ? "Admin Düzenle" : "Yeni Admin Ekle")</h5>
+                <button type="button" class="btn-close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="currentAdmin.Username" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">E-posta <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" @bind="currentAdmin.Email" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ad <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="currentAdmin.FirstName" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Soyad <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="currentAdmin.LastName" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Telefon</label>
+                        <input type="tel" class="form-control" @bind="currentAdmin.Phone" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Rol <span class="text-danger">*</span></label>
+                        <select class="form-select" @bind="currentAdmin.Role">
+                            <option value="">Seçiniz</option>
+                            <option value="SuperAdmin">Süper Admin</option>
+                            <option value="TenantAdmin">Tenant Admin</option>
+                            <option value="Employee">Çalışan</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (currentAdmin.Role == "TenantAdmin" || currentAdmin.Role == "Employee")
+                {
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tenant <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="currentAdmin.TenantId">
+                                <option value="">Seçiniz</option>
+                                @if (tenants != null)
+                                {
+                                    @foreach (var tenant in tenants)
+                                    {
+                                        <option value="@tenant.Id">@tenant.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Durum</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" @bind="currentAdmin.IsActive" />
+                                <label class="form-check-label">
+                                    @(currentAdmin.IsActive ? "Aktif" : "Pasif")
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!isEditMode || !string.IsNullOrEmpty(newPassword))
+                {
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Şifre @(!isEditMode ? "*" : "(Boş bırakılırsa değişmez)")
+                            </label>
+                            <div class="input-group">
+                                <input type="@(showPassword ? "text" : "password")" class="form-control" @bind="newPassword" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
+                                    <i class="bi bi-eye@(!showPassword ? "-slash" : "")"></i>
+                                </button>
+                            </div>
+                        </div>
+                        @if (!isEditMode)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Şifre Tekrar <span class="text-danger">*</span></label>
+                                <input type="@(showPassword ? "text" : "password")" class="form-control" @bind="confirmPassword" />
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!isEditMode)
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Kullanıcı oluşturulduktan sonra giriş bilgileri gösterilecektir. Lütfen bu bilgileri güvenli bir şekilde saklayın.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModal">İptal</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveAdmin" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    @(isEditMode ? "Güncelle" : "Ekle")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Credentials Modal -->
+<div class="modal fade @(showCredentialsModal ? "show d-block" : "")" tabindex="-1" style="@(showCredentialsModal ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Admin Başarıyla Oluşturuldu</h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseCredentialsModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Bu bilgileri güvenli bir yerde saklayın. Bu bilgiler tekrar gösterilmeyecektir.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Kullanıcı Adı:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="@createdUsername" readonly />
+                        <button class="btn btn-outline-secondary" @onclick="() => CopyToClipboard(createdUsername)">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Şifre:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="@createdPassword" readonly />
+                        <button class="btn btn-outline-secondary" @onclick="() => CopyToClipboard(createdPassword)">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(createdTenantName))
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tenant:</label>
+                        <input type="text" class="form-control" value="@createdTenantName" readonly />
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Rol:</label>
+                    <input type="text" class="form-control" value="@createdRole" readonly />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="CloseCredentialsModal">Tamam</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<UserDto> admins = new List<UserDto>();
+    private List<UserDto> filteredAdmins = new List<UserDto>();
+    private List<TenantDto> tenants = new List<TenantDto>();
+    private UserDto currentAdmin = new UserDto();
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private bool showPassword = false;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool showCredentialsModal = false;
+
+    private string searchTerm = "";
+    private string filterRole = "";
+    private string filterStatus = "";
+    private string errorMessage = "";
+
+    private string createdUsername = "";
+    private string createdPassword = "";
+    private string createdTenantName = "";
+    private string createdRole = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        FilterAdmins();
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Load admins
+            var usersResult = await ApiService.GetAsync<List<UserDto>>("superadmin/users");
+            if (usersResult != null)
+            {
+                admins = usersResult;
+                filteredAdmins = admins;
+            }
+
+            // Load tenants
+            var tenantsResult = await ApiService.GetAsync<List<TenantDto>>("superadmin/tenants");
+            if (tenantsResult != null)
+            {
+                tenants = tenantsResult.Where(t => t.IsActive).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Veriler yüklenirken hata oluştu: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterAdmins()
+    {
+        filteredAdmins = admins;
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredAdmins = filteredAdmins.Where(a =>
+                a.Username.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                a.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (a.FirstName + " " + a.LastName).Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(filterRole))
+        {
+            filteredAdmins = filteredAdmins.Where(a => a.Role == filterRole).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(filterStatus))
+        {
+            bool isActive = filterStatus == "true";
+            filteredAdmins = filteredAdmins.Where(a => a.IsActive == isActive).ToList();
+        }
+    }
+
+    private void OpenAddModal()
+    {
+        currentAdmin = new UserDto { IsActive = true };
+        newPassword = GenerateRandomPassword();
+        confirmPassword = "";
+        isEditMode = false;
+        errorMessage = "";
+        showModal = true;
+    }
+
+    private void OpenEditModal(UserDto admin)
+    {
+        currentAdmin = new UserDto
+        {
+            Id = admin.Id,
+            Username = admin.Username,
+            Email = admin.Email,
+            FirstName = admin.FirstName,
+            LastName = admin.LastName,
+            Phone = admin.Phone,
+            Role = admin.Role,
+            TenantId = admin.TenantId,
+            IsActive = admin.IsActive
+        };
+        newPassword = "";
+        confirmPassword = "";
+        isEditMode = true;
+        errorMessage = "";
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        errorMessage = "";
+    }
+
+    private async Task SaveAdmin()
+    {
+        try
+        {
+            errorMessage = "";
+
+            // Validation
+            if (string.IsNullOrWhiteSpace(currentAdmin.Username))
+            {
+                errorMessage = "Kullanıcı adı zorunludur.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentAdmin.Email))
+            {
+                errorMessage = "E-posta zorunludur.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentAdmin.FirstName))
+            {
+                errorMessage = "Ad zorunludur.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentAdmin.LastName))
+            {
+                errorMessage = "Soyad zorunludur.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentAdmin.Role))
+            {
+                errorMessage = "Rol seçimi zorunludur.";
+                return;
+            }
+
+            if ((currentAdmin.Role == "TenantAdmin" || currentAdmin.Role == "Employee") && !currentAdmin.TenantId.HasValue)
+            {
+                errorMessage = "TenantAdmin ve Employee rolleri için Tenant seçimi zorunludur.";
+                return;
+            }
+
+            if (!isEditMode)
+            {
+                if (string.IsNullOrWhiteSpace(newPassword))
+                {
+                    errorMessage = "Şifre zorunludur.";
+                    return;
+                }
+
+                if (newPassword != confirmPassword)
+                {
+                    errorMessage = "Şifreler eşleşmiyor.";
+                    return;
+                }
+            }
+
+            isSaving = true;
+
+            if (isEditMode)
+            {
+                var updateDto = new UpdateUserDto
+                {
+                    Username = currentAdmin.Username,
+                    Email = currentAdmin.Email,
+                    FirstName = currentAdmin.FirstName,
+                    LastName = currentAdmin.LastName,
+                    Phone = currentAdmin.Phone,
+                    Role = currentAdmin.Role,
+                    TenantId = currentAdmin.TenantId,
+                    IsActive = currentAdmin.IsActive,
+                    Password = string.IsNullOrWhiteSpace(newPassword) ? null : newPassword
+                };
+
+                var result = await ApiService.PutAsync($"superadmin/users/{currentAdmin.Id}", updateDto);
+                if (result)
+                {
+                    await LoadData();
+                    CloseModal();
+                    await JSRuntime.InvokeVoidAsync("alert", "Admin başarıyla güncellendi.");
+                }
+                else
+                {
+                    errorMessage = "Güncelleme sırasında hata oluştu.";
+                }
+            }
+            else
+            {
+                var createDto = new CreateUserDto
+                {
+                    Username = currentAdmin.Username,
+                    Email = currentAdmin.Email,
+                    FirstName = currentAdmin.FirstName,
+                    LastName = currentAdmin.LastName,
+                    Phone = currentAdmin.Phone,
+                    Role = currentAdmin.Role,
+                    TenantId = currentAdmin.TenantId,
+                    Password = newPassword
+                };
+
+                var createdUser = await ApiService.PostAsync<UserDto>("superadmin/users", createDto);
+                if (createdUser != null)
+                {
+                    await LoadData();
+                    CloseModal();
+
+                    // Show credentials
+                    createdUsername = currentAdmin.Username;
+                    createdPassword = newPassword;
+                    createdRole = GetRoleDisplayName(currentAdmin.Role);
+                    if (currentAdmin.TenantId.HasValue)
+                    {
+                        var tenant = tenants.FirstOrDefault(t => t.Id == currentAdmin.TenantId.Value);
+                        createdTenantName = tenant?.Name ?? "";
+                    }
+                    else
+                    {
+                        createdTenantName = "";
+                    }
+                    showCredentialsModal = true;
+                }
+                else
+                {
+                    errorMessage = "Ekleme sırasında hata oluştu.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Hata: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteAdmin(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Bu admini silmek istediğinizden emin misiniz?"))
+        {
+            try
+            {
+                var result = await ApiService.DeleteAsync($"superadmin/users/{id}");
+                if (result)
+                {
+                    await LoadData();
+                    await JSRuntime.InvokeVoidAsync("alert", "Admin başarıyla silindi.");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Silme işlemi başarısız.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Hata: {ex.Message}");
+            }
+        }
+    }
+
+    private void ShowCredentials(UserDto admin)
+    {
+        createdUsername = admin.Username;
+        createdPassword = "********"; // Güvenlik için şifre gösterilmez
+        createdRole = GetRoleDisplayName(admin.Role);
+        if (admin.TenantId.HasValue)
+        {
+            var tenant = tenants.FirstOrDefault(t => t.Id == admin.TenantId.Value);
+            createdTenantName = tenant?.Name ?? "";
+        }
+        else
+        {
+            createdTenantName = "";
+        }
+        showCredentialsModal = true;
+    }
+
+    private void CloseCredentialsModal()
+    {
+        showCredentialsModal = false;
+        createdUsername = "";
+        createdPassword = "";
+        createdTenantName = "";
+        createdRole = "";
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        await JSRuntime.InvokeVoidAsync("alert", "Panoya kopyalandı!");
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private string GenerateRandomPassword()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 12)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private string GetRoleDisplayName(string role)
+    {
+        return role switch
+        {
+            "SuperAdmin" => "Süper Admin",
+            "TenantAdmin" => "Tenant Admin",
+            "Employee" => "Çalışan",
+            _ => role
+        };
+    }
+
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? Phone { get; set; }
+        public string Role { get; set; } = "";
+        public int? TenantId { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public class TenantDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string SubDomain { get; set; } = "";
+        public string? Email { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class CreateUserDto
+    {
+        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? Phone { get; set; }
+        public string Role { get; set; } = "";
+        public int? TenantId { get; set; }
+        public string Password { get; set; } = "";
+    }
+
+    public class UpdateUserDto
+    {
+        public string Username { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? Phone { get; set; }
+        public string Role { get; set; } = "";
+        public int? TenantId { get; set; }
+        public bool IsActive { get; set; }
+        public string? Password { get; set; }
+    }
+}
