@@ -1,4 +1,3 @@
-using BeautyCenterFrontend.Client.Pages;
 using BeautyCenterFrontend.Components;
 using BeautyCenterFrontend.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -14,8 +13,7 @@ builder.Logging.AddDebug();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveServerComponents();
 
 // Add Circuit Handler for better error management
 builder.Services.AddScoped<CircuitHandler, CustomCircuitHandler>();
@@ -56,8 +54,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    // Browser Link is disabled to prevent JavaScript errors
-    app.UseWebAssemblyDebugging();
+    // Use developer exception page for better error visibility
 }
 else
 {
@@ -66,15 +63,12 @@ else
     app.UseHsts();
 }
 
-app.UseBlazorFrameworkFiles();
-
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(BeautyCenterFrontend.Client._Imports).Assembly);
+    .AddInteractiveServerRenderMode();
 
 app.Run();
